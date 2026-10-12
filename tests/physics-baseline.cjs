@@ -1,85 +1,154 @@
-// Current implementation baseline. No browser or production code changes.
-// Run: node --test tests/physics-baseline.cjs
 const assert = require('node:assert/strict');
 const {test} = require('node:test');
-const fs=require('fs'),vm=require('vm');
-const src=fs.readFileSync(require('node:path').join(__dirname, '../game.js'),'utf8');
-function game(w=390,h=844){
-let now=0;const listeners={},elements={};
-const draw=new Proxy({}, {get:()=>()=>{},set:()=>true});
-for(const id of ['canvas','#hud','left','right','boost'])elements[id]={addEventListener:(type,fn)=>listeners[id+':'+type]=fn,setPointerCapture(){},getContext:()=>draw};
-const ctx={document:{querySelector:s=>elements[s],getElementById:s=>elements[s]},innerWidth:w,innerHeight:h,devicePixelRatio:2,addEventListener(){},performance:{now:()=>now},requestAnimationFrame(){},console};
-vm.createContext(ctx);
-assert.ok(src.includes('loop()})();'), 'Update the harness when the game entry point changes');
-vm.runInContext(src.replace('loop()})();','globalThis.test={p,walls,loot,update,collision,resize,buttons:(l,r)=>{left=l;right=r},charge:v=>charge=v,state:()=>({cam,charge,score,drag,left,right})};loop()})();'),ctx);
-return {...ctx.test,step(n=1){for(let i=0;i<n;i++){now+=1000/60;ctx.test.update()}},event(id,type,x,y,t=now){now=t;listeners[id+':'+type]({clientX:x,clientY:y,pointerId:1,preventDefault(){}})},boost:()=>elements.boost.onclick(),width(v){ctx.innerWidth=v;ctx.test.resize()}}}
-const round=p=>Object.fromEntries(Object.entries(p).map(([k,v])=>[k,Math.round(v*1000)/1000]));
+const fs = require('node:fs');
+const vm = require('node:vm');
+const path = require('node:path');
 
-test('flat terrain remains stationary for 600 updates', () => {
-  const t=game(); t.step(600);
-  assert.equal(t.p.x,195); assert.equal(t.p.vx,0);
-  assert.ok(Math.abs(t.p.y-193)<0.01);
+function game(width = 390, height = 844) {
+  let now = 0;
+  const listeners = {};
+  const elements = {};
+  const gradient = {addColorStop() {}};
+  const drawing = new Proxy({}, {
+    get: (_, name) => name.startsWith('create') ? () => gradient : () => {},
+    set: () => true,
+  });
+  for (const id of ['canvas','depth','score','biome','boost','tip','map-track','energy','left','right']) {
+    elements[id] = {
+      style: {setProperty() {}},
+      addEventListener(type, handler) {listeners[id + ':' + type] = handler;},
+      setPointerCapture() {}, setAttribute() {}, getContext: () => drawing,
+    };
+  }
+  const context = {
+    document: {
+      querySelector: () => elements.canvas,
+      getElementById: id => elements[id],
+      addEventListener(type, handler) {listeners['document:' + type] = handler;},
+    },
+    innerWidth: width, innerHeight: height, devicePixelRatio: 2,
+    addEventListener(type, handler) {listeners['window:' + type] = handler;},
+    performance: {now: () => now},
+    requestAnimationFrame() {}, console,
+  };
+  vm.createContext(context);
+  const source = fs.readFileSync(path.join(__dirname, '../game.js'), 'utf8');
+  const hook = '  requestAnimationFrame(frame);\n})();';
+  assert.ok(source.endsWith(hook + '\n'), 'Update the test harness for changed entry point');
+  vm.runInContext(source.replace(hook,
+    '  globalThis.test = {player,camera,rows,loot,update,frame,resize,collision,restY,boost,WORLD_WIDTH,STEP_MS,' +
+    'controls:(l,r)=>{left=l;right=r},charge:v=>charge=v,state:()=>({drag,left,right,charge,score,ticks})};\n})();'), context);
+  return {
+    ...context.test,
+    elements,
+    step(n = 1) {for (let i = 0; i < n; i++) {now += 1000/60;context.test.update();}},
+    event(id, type, args = {}, time = now) {
+      now = time;
+      listeners[id + ':' + type]({pointerId: 1,clientX: 195,clientY: 300,preventDefault(){},...args});
+    },
+    resizeTo(w,h) {context.innerWidth=w;context.innerHeight=h;context.test.resize();},
+    settle() {this.step(120);},
+  };
+}
+
+test('wide floors require horizontal exploration between successive exits', () => {
+  const t=game();assert.equal(t.WORLD_WIDTH,2240);
+  assert.ok(t.rows[0].gapX-t.player.x>390/2);
+  for(let i=1;i<t.rows.length;i++){
+    const a=t.rows[i-1],b=t.rows[i];
+    assert.ok(Math.abs(a.gapX-b.gapX)>400);
+    assert.ok(b.gapWidth>t.player.r*4);
+  }
+  assert.ok(t.rows.every(r=>r.slabs.length===2));
 });
-test('right and left controls move in the requested direction', () => {
+test('player rests on flat ground and shallow humps without drift', () => {
+  const t=game();t.settle();
+  const start={...t.player};t.step(600);
+  assert.equal(t.player.x,start.x);assert.equal(t.player.y,start.y);
+  assert.equal(t.player.vx,0);assert.equal(t.player.vy,0);
+  const s=t.rows.flatMap(r=>r.walls).find(s=>s.top&&s.y!==s.y2);
+  assert.ok(s);
+  t.player.x=(s.x+s.x2)/2;t.player.y=t.restY(s,t.player.x);t.player.ground=s;
+  const x=t.player.x,y=t.player.y;t.step(600);
+  assert.equal(t.player.x,x);assert.equal(t.player.y,y);
+});
+test('both buttons move and releasing them stops on the floor', () => {
   for(const direction of [-1,1]){
-    const t=game(); t.step(120); t.buttons(direction<0,direction>0); t.step(15);
-    assert.ok((t.p.x-195)*direction>40);
-    t.buttons(false,false); t.step(180); assert.equal(t.p.vx,0);
+    const t=game();t.settle();const start=t.player.x;
+    t.controls(direction<0,direction>0);t.step(25);
+    assert.ok((t.player.x-start)*direction>80);
+    t.controls(false,false);t.step(120);
+    assert.equal(t.player.vx,0);assert.equal(t.player.vy,0);
+    assert.ok(t.player.ground);
   }
 });
-test('horizontal drag tracks target and cancellation clears drag', () => {
-  const t=game(); t.step(120);
-  t.event('canvas','pointerdown',195,193);
-  t.event('canvas','pointermove',235,193); t.step(60);
-  assert.ok(Math.abs(t.p.x-235)<1);
-  t.event('canvas','pointercancel',235,193);
-  assert.equal(t.state().drag,null);
+test('holding horizontal drag explores and slow upward drag never lifts', () => {
+  const t=game();t.settle();const startX=t.player.x,startY=t.player.y;
+  t.event('canvas','pointerdown');
+  for(let i=0;i<120;i++){
+    t.event('canvas','pointermove',{clientY:300-80*(i+1)/120});t.step();
+  }
+  assert.equal(t.player.y,startY);
+  t.event('canvas','pointermove',{clientX:260,clientY:220});t.step(25);
+  assert.ok(t.player.x>startX+80);
+  t.event('canvas','pointercancel');assert.equal(t.state().drag,null);
 });
-test('fast upward release launches; slow and stale releases do not launch', () => {
+test('quick upward flick jumps, slow or stale releases do not', () => {
   for(const [duration,pause,jump] of [[50,1,true],[500,1,false],[50,200,false]]){
-    const t=game(); t.step(120);
-    t.event('canvas','pointerdown',195,193,2000);
-    t.event('canvas','pointermove',195,113,2000+duration);
-    t.event('canvas','pointerup',195,113,2000+duration+pause);
-    if(jump){ assert.equal(t.p.vy,-22); t.step(5); assert.ok(t.p.y<100); }
-    else assert.ok(Math.abs(t.p.vy)<0.01);
+    const t=game();t.settle();
+    t.event('canvas','pointerdown',{},2000);
+    t.event('canvas','pointermove',{clientY:220},2000+duration);
+    t.event('canvas','pointerup',{clientY:220},2000+duration+pause);
+    if(jump){assert.equal(t.player.vy,-22);assert.equal(t.player.ground,null);}
+    else assert.equal(t.player.vy,0);
   }
 });
-test('underside collision reflects upward velocity downwards', () => {
-  const t=game(); Object.assign(t.p,{x:180,y:250,vx:0,vy:-15}); t.step(2);
-  assert.ok(t.p.vy>0); assert.ok(t.p.y>247);
+test('ceiling collision bounces and boost still requires 100 percent', () => {
+  const t=game();Object.assign(t.player,{x:1100,y:375,vx:0,vy:-15,ground:null});
+  t.step(2);assert.ok(t.player.vy>0);
+  t.settle();t.charge(99);t.boost();assert.equal(t.state().charge,99);
+  t.charge(100);t.boost();assert.equal(t.state().charge,0);assert.equal(t.player.vy,-19);
+  assert.equal(t.player.ground,null);
 });
-test('boost requires full energy and consumes it', () => {
-  const t=game(); t.step(120); t.charge(99); t.boost();
-  assert.ok(Math.abs(t.p.vy)<0.01); assert.equal(t.state().charge,99);
-  t.charge(100); t.boost();
-  assert.equal(t.p.vx,15); assert.equal(t.p.vy,-19); assert.equal(t.state().charge,0);
+test('walking to an exit descends and following exits require a turn', () => {
+  const t=game();t.settle();t.controls(false,true);
+  t.step(110);
+  assert.ok(t.player.y>t.rows[0].y+100,'Player should descend through opening');
+  t.controls(false,false);t.step(180);
+  assert.ok(t.player.ground);
+  assert.ok(t.player.y>t.rows[1].y-40);
+  assert.ok(t.camera.x>900);assert.ok(t.camera.y>0);
+  const floor=t.player.ground, y=t.player.y;t.step(180);
+  assert.equal(t.player.ground,floor);assert.equal(t.player.y,y);
+  assert.ok(t.rows[1].gapX<t.player.x-390,'Next opening is outside the viewport');
 });
-test('collectibles increase score and energy', () => {
-  const t=game(); const o=t.loot.find(o=>!o.bug);
-  Object.assign(t.p,{x:o.x,y:o.y,vx:0,vy:0}); t.step();
-  assert.equal(o.got,true); assert.equal(t.state().score,1); assert.equal(t.state().charge,7);
+test('items and caterpillars preserve collection and movement', () => {
+  const t=game();const o=t.loot[0];
+  Object.assign(t.player,{x:o.x,y:o.y,vx:0,vy:0,ground:null});t.step();
+  assert.equal(o.got,true);assert.equal(t.state().score,1);assert.ok(t.state().charge>=7);
+  const bug=t.loot.find(o=>o.bug),x=bug.x;
+  t.player.y=bug.y;t.step(20);assert.notEqual(bug.x,x);
 });
-// These diagnostics reproduce open issues; they are deliberately not passing
-// assertions for the desired behavior. See docs/VERIFICATION.md.
-test('report open physics issues for the existing implementation', context => {
-  const slope=game();
-  const s=slope.walls.find(s=>s.y===1472&&s.y2===1459);
-  const dx=s.x2-s.x,dy=s.y2-s.y,len=Math.hypot(dx,dy);
-  Object.assign(slope.p,{x:(s.x+s.x2)/2+dy/len*27,y:(s.y+s.y2)/2-dx/len*27,vx:0,vy:0});
-  const startX=slope.p.x; slope.step(600);
-  const slow=game(); slow.step(120); const startY=slow.p.y;
-  slow.event('canvas','pointerdown',195,193);
-  for(let i=0;i<120;i++){slow.event('canvas','pointermove',195,193-80*(i+1)/120);slow.step();}
-  const rise=startY-slow.p.y; slow.step(180);
-  const rates={};
-  for(const hz of [30,60,120]){const t=game();t.step(120);t.buttons(false,true);t.step(Math.floor(hz*0.25));rates[hz]=+(t.p.x-195).toFixed(2);}
-  const resized=game(); resized.width(844);
-  context.diagnostic(JSON.stringify({
-    slopeDriftAfter600Updates:+(slope.p.x-startX).toFixed(2),
-    slowDragRiseAfter120Updates:+rise.toFixed(2),
-    slowDragYAfterHold180Updates:+slow.p.y.toFixed(2),
-    buttonDisplacementAtApproxQuarterSecond:rates,
-    terrainMaxXAfterResizeTo844:Math.max(...resized.walls.flatMap(s=>[s.x,s.x2]))
-  }));
+test('30, 60 and 120 Hz frames run identical elapsed-time physics', () => {
+  const states=[];
+  for(const hz of [30,60,120]){
+    const t=game();t.settle();t.controls(false,true);t.frame(0);
+    for(let i=1;i<=hz;i++)t.frame(i*1000/hz);
+    states.push([t.player.x,t.player.y,t.player.vx,t.state().ticks]);
+  }
+  assert.deepEqual(states[0],states[1]);assert.deepEqual(states[1],states[2]);
+});
+test('resize preserves world and progress; blur releases all inputs', () => {
+  const t=game();t.settle();const x=t.player.x,y=t.player.y,gap=t.rows[0].gapX;
+  t.resizeTo(844,390);assert.equal(t.player.x,x);assert.equal(t.player.y,y);
+  assert.equal(t.rows[0].gapX,gap);assert.equal(t.rows[0].slabs[1].end,2240);
+  t.controls(false,true);t.event('canvas','pointerdown');t.event('window','blur');
+  assert.equal(t.state().right,false);assert.equal(t.state().drag,null);
+  t.frame(0);t.event('document','visibilitychange');t.frame(10000);
+  assert.equal(t.state().ticks,120,'Returning from background must not simulate paused time');
+});
+test('deeper exploration extends the map without a lethal bottom', () => {
+  const t=game(),count=t.rows.length;
+  Object.assign(t.player,{y:t.rows[count-3].y,ground:null});
+  t.step();assert.ok(t.rows.length>count);
 });

@@ -1,43 +1,37 @@
 # Codex handoff — ダンゴムシころころ
 
 ## Project
-- iPhone Safari playable, child-friendly, no game-over underground woodlouse rolling game.
+- iPhone Safari playable, child-friendly, no game-over underground woodlouse exploration game.
 - GitHub repository: https://github.com/sleeeepme/dango
 - Production: https://dangomushi-korokoro-game.vercel.app/
 - Vercel project: dangomushi-korokoro-game (prj_Tnkfk8zJyNFpufaQSPZXButAHaca)
-- GitHub main is connected to Vercel production auto-deployment.
-- Latest terrain update commit at handoff: a922ba6384964deb3125fd5e51fe04ecc6c6a2a4. The latest published version has flat platforms, some uneven bumps, and greater rolling friction.
+- GitHub main is connected to Vercel production auto-deployment. Push working updates to main; keep the public URL.
 
 ## Code
-- index.html: full-screen canvas and controls, no build step.
-- game.js: gameplay, world generation, collision, gestures, rendering.
-- Drag finger to move, quick upward flick on release launches the player, left/right buttons roll, 100% energy enables special boost.
-- Woodlouse legs and antennae animate; moving caterpillars and collectibles are present.
-- Camera follows depth, biomes change as the player descends.
+- index.html: full-screen canvas, HUD, exploration indicator and touch controls. No build step or external dependencies.
+- game.js: readable single-file gameplay, world generation, physics, input and procedural Canvas artwork.
+- Fixed world width: 2240. Floors are 330px apart, with 166–196px openings at different horizontal positions. Extend rows as the player descends.
+- Camera follows horizontally and vertically; resize changes the viewport without regenerating the world or losing progress.
+- Drag horizontally and hold to roll; quick upward flick on release jumps. Left/right buttons roll. Full energy enables special boost. Arrow keys and Space are also supported.
+- Woodlouse legs and antennae animate. Drawn leaves, mushrooms, crystals and roaming collectible caterpillars replace gameplay emoji artwork.
+- Five depth palettes, soil layers, moss, roots, ferns and glowing mushrooms. Opening markers are in the world, so exploration is necessary to find them.
 
 ## User priorities and constraints
-1. User wants more flat terrain, occasional bumps and uneven ground, and **no continuous automatic rolling on down-slopes**. This change was just implemented but actual iPhone play-feel is not verified. Iterate based on playtesting.
-2. Upward fast swipe should visibly launch the woodlouse; slow upward drag should not let it fly. Ceiling collision should bounce.
-3. Preserve intuitive touch controls, smooth frame rate, and mobile Safari compatibility.
-4. Deploy working updates through GitHub -> Vercel, not by replacing the whole Vercel HTML with direct deploy.
-5. Avoid regressions; test JS syntax and behavior where possible, then verify deployment READY. Be explicit if real-device testing has not happened.
-6. Communicate in Japanese.
+1. Explore a wide map sideways to find where to descend. Do not return to viewport-wide automatically descending platforms.
+2. Mostly flat terrain, occasional low bumps, and no continuous automatic rolling on down-slopes.
+3. Upward fast swipe should visibly launch the woodlouse; slow upward drag must not lift it. Ceiling collision should bounce.
+4. Preserve intuitive touch controls, smooth frame rate, mobile Safari compatibility and existing gameplay features.
+5. Deploy via GitHub main -> Vercel. Do not replace the whole Vercel HTML via direct deployment.
+6. Test syntax, physics, complete browser flow and confirm deployment READY before claiming publication. Be explicit when real-device testing has not happened.
+7. Communicate in Japanese.
 
-## Implementation notes
-- Terrain is currently generated as alternating platform segments in a for loop in game.js. The latest version replaces many sloped surfaces with horizontal sections and small height differences.
-- Physics uses circle vs line-segment collision, velocity reflection, and friction; consider grounded-state logic for reliable resting on flat ground, as a future improvement.
-- Existing code is minified into a single long line; refactor into readable modules when useful, but keep deployment simple.
-- Do not remove gameplay features unless requested.
-
-## Next steps
-- Inspect current source and production version.
-- Test on iPhone Safari, or ask user for feedback on actual play feel.
-- Improve terrain variety and resting physics as necessary.
-- Continue feature requests in GitHub with automatic Vercel deployments.
-
-## Codex verification baseline (2026-10-12)
-
-- Initial implementation and production inspected at main `2c045f1`; Vercel production was READY and matched that commit.
-- See [docs/VERIFICATION.md](docs/VERIFICATION.md) for evidence and remaining issues: slow upward drag lifts/holds the player, slope contact correction drifts despite vx=0, frame-rate-dependent physics, and terrain not adapting to resize.
-- Run `node --check game.js` and `node --test tests/physics-baseline.cjs`. The diagnostic case reports known issues; passing baseline tests do not mean those issues are fixed.
-- Browser verification at 390x844 is not real-device iPhone Safari verification.
+## Physics and verification
+- Fixed simulation step: 60Hz; render uses requestAnimationFrame. Clamp elapsed time to 100ms and reset timing/input on visibility changes.
+- Circle radius 20; collision surfaces match drawn slab tops, sides and undersides.
+- Persisted ground support snaps to the surface to prevent positional slope drift. Drag controls only horizontal motion; upward release applies jump.
+- Static world bounds, camera transforms and touch coordinates remain independent of viewport width.
+- Run `node --check game.js` and `node --test tests/physics-baseline.cjs`.
+- The tests inject a VM-only hook before initialization ends; keep game state private in production.
+- Initial evidence and the wide-map update are recorded in [docs/VERIFICATION.md](docs/VERIFICATION.md).
+- The wide-map update resolves the four initial issues (slow drag lift, slope drift, frame dependence and resize mismatch). These now have assertions, not merely diagnostics.
+- Browser checks at phone and landscape viewport sizes do not constitute real-device iPhone Safari verification.
