@@ -43,7 +43,7 @@ function game(width = 390, height = 844) {
   const hook = '  requestAnimationFrame(frame);\n})();';
   assert.ok(source.endsWith(hook + '\n'), 'Update the test harness for changed entry point');
   vm.runInContext(source.replace(hook,
-    '  globalThis.test = {player,camera,rows,loot,update,frame,resize,collision,restY,boost,fauna,pickupPops,drawSlab,palettes,forms,evolution,drawPlayer,WORLD_WIDTH,STEP_MS,' +
+    '  globalThis.test = {player,camera,rows,loot,update,frame,resize,collision,restY,boost,fauna,pickupPops,drawSlab,palettes,forms,evolution,collectedAnimals,drawPlayer,WORLD_WIDTH,STEP_MS,' +
     'controls:(l,r)=>{left=l;right=r},charge:v=>charge=v,state:()=>({drag,left,right,charge,score,ticks})};\n})();'), context);
   return {
     ...context.test,
@@ -202,8 +202,9 @@ test('friendly beetles, mantises and animals move safely on solid floors', () =>
   const animal=t.fauna.find(o=>o.kind==='beetle'),oldX=animal.x;
   Object.assign(t.player,{x:animal.x,y:animal.y-20,vx:0,vy:0,ground:null});
   t.step(30);
-  assert.notEqual(animal.x,oldX);assert.ok(animal.hello>0.5);
-  assert.ok(t.player.ground);assert.equal(t.state().score,0,'Friends should not disappear as collectibles');
+  assert.notEqual(animal.x,oldX);assert.equal(animal.got,true);
+  assert.ok(t.player.ground);assert.equal(t.state().score,1);
+  assert.equal(t.collectedAnimals.beetle,1);assert.equal(t.evolution.crystals,0);
   for(const o of t.fauna){
     const row=t.rows[o.row];
     assert.ok(o.baseX+18<row.gapX||o.baseX-18>row.gapX+row.gapWidth);
@@ -325,4 +326,28 @@ test('crystals appear on the first floor and throughout extended maps', () => {
     for(const item of crystals)
       assert.ok(row.walls.some(s=>s.top&&item.x>=s.x&&item.x<=s.x2));
   }
+});
+
+test('all seven animals can be collected once, with a picture and charging reward', () => {
+  const t=game();for(const o of t.loot)o.got=true;
+  for(const kind of ['beetle','stag','mantis','ladybug','frog','snail','butterfly']){
+    for(const a of t.fauna)a.got=true;
+    const a=t.fauna.find(a=>a.kind===kind);a.got=false;
+    Object.assign(t.player,{x:a.x,y:a.y-20,vx:0,vy:0,ground:null});
+    const before=t.state().score;t.step();
+    assert.equal(a.got,true);assert.equal(t.state().score,before+1);
+    assert.equal(t.collectedAnimals[kind],1);
+    assert.ok(t.pickupPops.some(pop=>pop.animalKind===kind));
+    t.step(5);assert.equal(t.collectedAnimals[kind],1);
+  }
+  assert.equal(t.evolution.crystals,0);assert.ok(t.state().charge>=49);
+  t.step(80);assert.equal(t.pickupPops.length,0);
+});
+test('transform effect lasts long enough to notice, fades, and leaves the evolved form', () => {
+  const t=game();t.settle();for(const item of t.loot)item.got=true;
+  for(let i=0;i<5;i++){t.loot.push({x:t.player.x,y:t.player.y,row:0,kind:2,phase:0});t.step();}
+  assert.equal(t.evolution.stage,1);assert.equal(t.evolution.pulse,150);
+  t.step(60);assert.equal(t.evolution.pulse,90);t.drawPlayer();
+  assert.equal(t.player.r,20);
+  t.step(100);assert.equal(t.evolution.pulse,0);assert.equal(t.evolution.stage,1);
 });

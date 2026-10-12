@@ -27,7 +27,8 @@
   const fauna = [];
   const pickupPops = [];
   const EVOLUTION_EVERY = 5;
-  const evolution = { crystals: 0, stage: 0, pulse: 0 };
+  const evolution = { crystals: 0, stage: 0, pulse: 0, duration: 0 };
+  const collectedAnimals = Object.create(null);
   const forms = [
     { id:'normal', light:'#c6d8ef', mid:'#93b4dc', shade:'#708db9', edge:'#506e99', face:'#d6e7ed', glow:'#d7ecf6' },
     { id:'robot', light:'#eff5f4', mid:'#afc9d1', shade:'#7893ab', edge:'#627e93', face:'#e3eded', glow:'#b4e8ef' },
@@ -221,11 +222,18 @@
       }
     }
     for (const animal of fauna) {
-      if (Math.abs(animal.row - rowIndex) > 2) continue;
+      if (animal.got || Math.abs(animal.row - rowIndex) > 2) continue;
       animal.x = animal.baseX + Math.sin(ticks * 0.012 + animal.phase) * 18;
       const surface = rows[animal.row].walls.find(w => w.top && animal.x >= w.x && animal.x <= w.x2);
       animal.y = surfaceY(surface, animal.x);
       animal.hello += ((Math.hypot(animal.x - player.x, animal.y - 20 - player.y) < 80 ? 1 : 0) - animal.hello) * 0.08;
+      if (Math.hypot(animal.x-player.x,animal.y-20-player.y)<42) {
+        animal.got=true;score++;
+        collectedAnimals[animal.kind]=(collectedAnimals[animal.kind]||0)+1;
+        charge=Math.min(100,charge+7);
+        pickupPops.push({animalKind:animal.kind,x:player.x,y:player.y-35,phase:animal.phase,life:65});
+        burst(animal.x,animal.y-20,'#ffe2a4');
+      }
     }
     for (let i=pickupPops.length-1;i>=0;i--) {
       const pop=pickupPops[i];pop.y-=0.8;
@@ -608,10 +616,10 @@
     const next = Math.min(forms.length - 1, Math.floor(evolution.crystals / EVOLUTION_EVERY));
     if (next > evolution.stage) {
       evolution.stage = next;
-      evolution.pulse = 100;
+      evolution.pulse = evolution.duration = 150;
       burst(player.x, player.y, forms[next].glow);
     } else if (evolution.crystals % EVOLUTION_EVERY === 0) {
-      evolution.pulse = 55;
+      evolution.pulse = evolution.duration = 55;
     }
   }
 
@@ -629,14 +637,22 @@
   function evolutionBackdrop(form) {
     const pulse=evolution.pulse;
     if(pulse>0){
-      const progress=1-pulse/100;
-      glow(0,0,65,form.glow,Math.min(.3,pulse/200));
-      g.save();g.globalAlpha=Math.min(.6,pulse/90);
-      g.strokeStyle=form.glow;g.lineWidth=3;
-      g.beginPath();g.arc(0,0,25+progress*40,0,Math.PI*2);g.stroke();
-      for(let i=0;i<6;i++){
-        const a=i*Math.PI/3+progress*.4;
-        star(Math.cos(a)*(32+progress*16),Math.sin(a)*(32+progress*16),3.5,form.glow);
+      const duration=evolution.duration||150,progress=1-pulse/duration;
+      const opacity=Math.min(1,(duration-pulse+1)/12,pulse/35);
+      glow(0,-6,105,'#ffe5ab',opacity*.5);
+      g.save();g.globalAlpha=opacity*.85;
+      const radius=35+progress*28;
+      g.strokeStyle='#95b6c8';g.lineWidth=7;
+      g.beginPath();g.arc(0,0,radius,0,Math.PI*2);g.stroke();
+      g.strokeStyle='#fff9dc';g.lineWidth=3;
+      g.beginPath();g.arc(0,0,radius,0,Math.PI*2);g.stroke();
+      g.strokeStyle='#e9bd70';g.lineWidth=2.5;
+      g.beginPath();g.arc(0,0,radius+9,0,Math.PI*2);g.stroke();
+      for(let i=0;i<10;i++){
+        const angle=i*Math.PI/5+progress*.75;
+        const distance=48+Math.sin(progress*Math.PI)*15;
+        star(Math.cos(angle)*distance,Math.sin(angle)*distance,5+Math.sin(progress*Math.PI)*2,
+          ['#eab978','#a0c4df','#e5aaa4'][i%3]);
       }
       g.restore();
     }
@@ -696,6 +712,10 @@
     const angle=rolling?spin:Math.sin(ticks*.035)*.025;
     const wiggle=Math.sin(ticks*.24)*Math.min(1,Math.abs(player.vx)/3+.12);
     g.save();g.translate(x,y);
+    if(evolution.pulse>0){
+      const progress=1-evolution.pulse/(evolution.duration||150);
+      const size=1+Math.sin(progress*Math.PI)*.18;g.scale(size,size);
+    }
     evolutionBackdrop(form);
     g.rotate(angle);
     g.strokeStyle=form.edge;g.lineWidth=2.8;g.lineCap='round';
@@ -777,7 +797,7 @@
     const start=Math.max(0,Math.floor((camera.y-FIRST_FLOOR-70)/ROW_HEIGHT));
     const end=Math.min(rows.length,Math.ceil((camera.y+H-FIRST_FLOOR+70)/ROW_HEIGHT)+1);
     for(let i=start;i<end;i++)drawRow(rows[i]);
-    for(const animal of fauna)if(animal.row>=start&&animal.row<end)drawFriend(animal);
+    for(const animal of fauna)if(!animal.got&&animal.row>=start&&animal.row<end)drawFriend(animal);
     for(const o of loot)if(!o.got&&o.row>=start&&o.row<end)drawLoot(o);
     // Drifting fireflies give depth without obscuring collision surfaces.
     for(let i=0;i<9;i++){
@@ -788,7 +808,12 @@
     g.globalAlpha=1;
     for(const m of motes){g.globalAlpha=m.life/34;g.fillStyle=m.color;g.beginPath();g.arc(m.x-camera.x,m.y-camera.y,2,0,7);g.fill();}
     g.globalAlpha=1;drawPlayer();
-    for(const pop of pickupPops){g.save();g.globalAlpha=Math.min(1,pop.life/15);drawLoot(pop,true);g.restore();}
+    for(const pop of pickupPops){
+      g.save();g.globalAlpha=Math.min(1,pop.life/15);
+      if(pop.animalKind)drawFriend({...pop,kind:pop.animalKind,y:pop.y+20,hello:1});
+      else drawLoot(pop,true);
+      g.restore();
+    }
     const vignette=g.createRadialGradient(W*.5,H*.45,Math.min(W,H)*.2,W*.5,H*.45,Math.max(W,H)*.8);
     vignette.addColorStop(0,'transparent');vignette.addColorStop(1,'#5f896318');g.fillStyle=vignette;g.fillRect(0,0,W,H);
   }

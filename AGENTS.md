@@ -48,7 +48,7 @@
 - Normal maximum rise is about 100px. Preserve grounded rest, slow-drag behavior and ceiling bounce.
 - Collectible treasure is drawn at 1.75x with a ring/glow, positioned 43px above the floor, and collected within 44px. Caterpillars retain their existing behavior.
 - A successful treasure pickup shows its picture above the player at 2x for 48 steps and then fades; no text or numbers.
-- Friendly fauna are separate from loot: rhinoceros beetle, stag beetle, mantis, ladybug, frog, snail and butterfly. They move gently, greet nearby players and never attack, block or disappear as pickups.
+- Friendly fauna are separate from loot: rhinoceros beetle, stag beetle, mantis, ladybug, frog, snail and butterfly. They move gently, greet nearby players and can now be collected on contact; they never attack or block.
 - Place friends between treasures so larger icons do not hide faces or distinctive horns.
 
 ## Horizontal flick regression guard
@@ -68,3 +68,8 @@
 - Evolutions have distinct silhouettes/accessories, gentle ring/star effects and small crystal pictures near the character; no visible text, numeric counters or HUD panels.
 - Preserve all physics and radius=20 across every form, including low sideways flicks, limited upward jumps and grounded rest.
 - The six-form inspection gallery is local-only under /tmp/dango-evolution-preview. Do not expose its test state hook in production.
+
+## Collectible wildlife and readable transformation
+- All seven fauna are collectible once on contact (42px from body center). Keep them friendly and non-blocking. Track got and per-species collectedAnimals; reward score and charge +7 and show the animal picture for 65 steps.
+- Wildlife does not increment crystal evolution. Skip captured animals during movement and world drawing.
+- Evolution duration is 150 fixed steps (~2.5s), with thick blue/cream and gold rings, ten colored stars, warm glow and a gentle maximum 18% visual enlargement. Fade in/out; no full-screen flash, text, pause or physics changes.
