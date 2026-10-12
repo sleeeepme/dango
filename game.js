@@ -14,11 +14,11 @@
   const FIRST_FLOOR = 320;
   const STEP_MS = 1000 / 60;
   const palettes = [
-    { name: '苔むす入口', back: '#233a35', far: '#345048', soil: '#645042', dark: '#382e2a', edge: '#a0b378', moss: '#769c67', glow: '#c4e9a0' },
-    { name: '根っこの森', back: '#302e31', far: '#494044', soil: '#735345', dark: '#3c2f2b', edge: '#c0a476', moss: '#94a66a', glow: '#f0d58b' },
-    { name: '青い石の洞窟', back: '#202f40', far: '#304958', soil: '#546373', dark: '#2a3946', edge: '#88c0c5', moss: '#68a4a7', glow: '#a0e9eb' },
-    { name: 'ひかりの地底湖', back: '#193b3f', far: '#2c5659', soil: '#52645f', dark: '#293d3c', edge: '#8bc4ad', moss: '#63b29e', glow: '#a1eed0' },
-    { name: '琥珀の奥庭', back: '#402d33', far: '#62434a', soil: '#815b50', dark: '#493138', edge: '#d9ab82', moss: '#ba966e', glow: '#ffcea0' },
+    { name: 'こけの おにわ', back: '#afcfb7', far: '#dce7bb', soil: '#bc895e', dark: '#92654e', edge: '#d3e897', moss: '#86b452', glow: '#fff0ae' },
+    { name: 'ねっこの もり', back: '#cfc4a5', far: '#eee2b7', soil: '#c19369', dark: '#a07056', edge: '#dde9a2', moss: '#9ab460', glow: '#fff0b3' },
+    { name: 'あおい どうくつ', back: '#b2d0db', far: '#d8e9e5', soil: '#a6a5c0', dark: '#8585a5', edge: '#b5dde0', moss: '#86b9b0', glow: '#fff1c0' },
+    { name: 'ひかる ちていこ', back: '#9ecbbb', far: '#cde6cd', soil: '#a2b8a0', dark: '#7a9585', edge: '#cbeca9', moss: '#78bc9c', glow: '#e6ffd0' },
+    { name: 'こはくの おにわ', back: '#dabfae', far: '#f1d9bc', soil: '#bc8b80', dark: '#a4726d', edge: '#edda9e', moss: '#b3be73', glow: '#fff0b5' },
   ];
   const player = { x: 1060, y: 180, vx: 0, vy: 0, r: 20, ground: null };
   const camera = { x: 0, y: 0 };
@@ -219,8 +219,8 @@
     mapTrack.style.setProperty('--player', player.x / WORLD_WIDTH * 100 + '%');
     const row = rows[Math.max(0, Math.floor((player.y - FIRST_FLOOR + 55) / ROW_HEIGHT))];
     tip.textContent = row && Math.abs(player.x - row.gapX - row.gapWidth / 2) < 230 && Math.abs(player.y - row.y) < 95
-      ? '光るキノコの先に、下への道。'
-      : maxDepth < 3 ? '左右にひっぱって探検。上にサッと払うとジャンプ。' : '次の降り口は、どこだろう。';
+      ? 'ひかるキノコの さきへ おりてみよう！'
+      : maxDepth < 3 ? 'ひっぱって ころころ。うえに サッと ジャンプ！' : 'つぎの おりぐちは、どこかな？';
   }
 
   function pathLine(points) {
@@ -232,7 +232,7 @@
   function glow(x, y, radius, color, opacity = 0.16) {
     const gradient = g.createRadialGradient(x, y, 0, x, y, radius);
     gradient.addColorStop(0, color);
-    gradient.addColorStop(1, 'transparent');
+    gradient.addColorStop(1, color + '00');
     g.globalAlpha = opacity;
     g.fillStyle = gradient;
     g.fillRect(x - radius, y - radius, radius * 2, radius * 2);
@@ -240,98 +240,153 @@
   }
 
   function mushroom(x, y, scale, color, lit = false) {
-    if (lit) glow(x, y - 12 * scale, 62 * scale, color, 0.18);
+    if (lit) glow(x, y - 17 * scale, 76 * scale, '#fff4af', 0.55);
     g.save(); g.translate(x, y); g.scale(scale, scale);
-    g.strokeStyle = '#d6cba4'; g.lineWidth = 3; g.lineCap = 'round';
-    g.beginPath(); g.moveTo(0, 0); g.quadraticCurveTo(-3, -9, 0, -17); g.stroke();
-    g.fillStyle = color;
-    g.beginPath(); g.moveTo(-12, -15); g.bezierCurveTo(-10, -32, 10, -31, 13, -15); g.quadraticCurveTo(0, -11, -12, -15); g.fill();
-    g.fillStyle = '#f4efd0'; g.globalAlpha = 0.65;
-    for (const [a,b,r] of [[-5,-20,2],[3,-24,2.4],[7,-18,1.4]]) { g.beginPath(); g.arc(a,b,r,0,Math.PI*2);g.fill(); }
-    g.globalAlpha = 1; g.restore();
+    g.lineCap = 'round'; g.lineJoin = 'round';
+    g.strokeStyle = '#a77854'; g.lineWidth = 6;
+    g.beginPath(); g.moveTo(0, -1); g.quadraticCurveTo(-2, -10, 0, -18); g.stroke();
+    g.strokeStyle = '#fff0cb'; g.lineWidth = 4;
+    g.beginPath(); g.moveTo(0, -2); g.quadraticCurveTo(-2, -10, 0, -18); g.stroke();
+    g.fillStyle = '#ffe9b8';
+    g.beginPath(); g.ellipse(0, -14, 14, 4, 0, 0, Math.PI * 2); g.fill();
+    const cap = g.createLinearGradient(0, -30, 0, -13);
+    cap.addColorStop(0, lit ? '#ffeab0' : color);
+    cap.addColorStop(1, lit ? '#e9bb63' : '#d47e65');
+    g.fillStyle = cap; g.strokeStyle = lit ? '#b79451' : '#b66e55'; g.lineWidth = 1.2;
+    g.beginPath(); g.moveTo(-14, -15);
+    g.bezierCurveTo(-12, -34, 12, -34, 14, -15);
+    g.quadraticCurveTo(0, -10, -14, -15); g.fill(); g.stroke();
+    g.fillStyle = '#fff4d9';
+    for (const [a, b, r] of [[-6,-21,2.6],[2,-25,3],[8,-18,1.8]]) {
+      g.beginPath(); g.arc(a,b,r,0,Math.PI*2); g.fill();
+    }
+    g.strokeStyle = '#fff7e5'; g.lineWidth = 1.7;
+    g.beginPath(); g.moveTo(-9,-21); g.quadraticCurveTo(-7,-27,-3,-28); g.stroke();
+    if (lit) {
+      g.fillStyle = '#886b43';
+      for (const ex of [-4,4]) { g.beginPath(); g.arc(ex,-17,1.2,0,7); g.fill(); }
+      g.strokeStyle = '#886b43'; g.lineWidth = 1;
+      g.beginPath(); g.arc(0,-15,2,0.2,Math.PI-0.2); g.stroke();
+    }
+    g.restore();
   }
 
   function fern(x, y, scale, color, seed) {
     g.save(); g.translate(x, y); g.scale(scale, scale);
-    g.strokeStyle = color; g.lineWidth = 1.4; g.lineCap = 'round';
-    g.beginPath(); g.moveTo(0,0); g.quadraticCurveTo(-4,-20,8,-37); g.stroke();
-    g.fillStyle = color;
-    for(let i=0;i<5;i++) {
-      const yy=-6-i*5.8, xx=i*0.9;
-      for(const side of [-1,1]) {
-        g.beginPath(); g.moveTo(xx,yy); g.quadraticCurveTo(xx+side*(12-i),yy-8,xx+side*(16-i*2),yy-2);
+    const lean = Math.sin(ticks * 0.018 + seed * 10) * 1.8;
+    g.strokeStyle = '#70964c'; g.lineWidth = 2.5; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(0,0); g.quadraticCurveTo(-3+lean,-17,5+lean,-36); g.stroke();
+    for (let i=0;i<4;i++) {
+      const yy=-7-i*7.5,xx=i+lean;
+      for (const side of [-1,1]) {
+        g.fillStyle = i%2 ? '#a4c968' : color;
+        g.beginPath(); g.moveTo(xx,yy);
+        g.bezierCurveTo(xx+side*6,yy-9,xx+side*(16-i*2),yy-9,xx+side*(14-i*2),yy-3);
         g.quadraticCurveTo(xx+side*7,yy+3,xx,yy);g.fill();
+        g.strokeStyle='#e0eca2';g.lineWidth=.9;
+        g.beginPath();g.moveTo(xx+side*2,yy-1);g.lineTo(xx+side*9,yy-4);g.stroke();
       }
+    }
+    if (seed > .9) {
+      const fx=5+lean,fy=-38;
+      for(let i=0;i<5;i++) {
+        const angle=i*Math.PI*2/5;
+        g.fillStyle='#fff0a5';g.beginPath();g.ellipse(fx+Math.cos(angle)*5,fy+Math.sin(angle)*5,4,3,angle,0,7);g.fill();
+      }
+      g.fillStyle='#e3a15b';g.beginPath();g.arc(fx,fy,3,0,7);g.fill();
     }
     g.restore();
   }
 
   function background(palette) {
-    const base = g.createLinearGradient(0, 0, W, H);
-    base.addColorStop(0, palette.far); base.addColorStop(0.6, palette.back); base.addColorStop(1, palette.back);
-    g.fillStyle = base; g.fillRect(0,0,W,H);
-    // Far cave silhouettes move more slowly than the playable terrain.
-    const px = camera.x * 0.3, py = camera.y * 0.3;
-    for(let row=Math.floor(py/180)-1;row<Math.ceil((py+H)/180)+1;row++) {
-      for(let col=Math.floor(px/180)-1;col<Math.ceil((px+W)/180)+1;col++) {
-        const n=noise(col,row), x=col*180-px+n*55, y=row*180-py+noise(row,col)*70;
-        g.fillStyle=palette.dark;g.globalAlpha=0.13+n*0.12;
-        g.beginPath();g.ellipse(x,y,55+n*38,28+n*45,n*2,0,Math.PI*2);g.fill();
-        g.globalAlpha=0.12;g.strokeStyle=palette.edge;g.lineWidth=1;
-        g.beginPath();g.moveTo(x-28,y-8);g.lineTo(x-7,y-20);g.lineTo(x+20,y-12);g.stroke();
+    const base=g.createLinearGradient(0,0,W*.4,H);
+    base.addColorStop(0,palette.far);base.addColorStop(.75,palette.back);
+    g.fillStyle=base;g.fillRect(0,0,W,H);
+    // Rounded, painted stones and leaf silhouettes keep the cave gentle.
+    const px=camera.x*.3,py=camera.y*.3;
+    for(let row=Math.floor(py/190)-1;row<Math.ceil((py+H)/190)+1;row++) {
+      for(let col=Math.floor(px/190)-1;col<Math.ceil((px+W)/190)+1;col++) {
+        const n=noise(col,row),x=col*190-px+n*55,y=row*190-py+noise(row,col)*65;
+        g.fillStyle=palette.moss;g.globalAlpha=.08+n*.08;
+        g.beginPath();g.ellipse(x,y,65+n*35,40+n*30,n,0,7);g.fill();
+        g.strokeStyle='#f7f5d7';g.globalAlpha=.24;g.lineWidth=3;g.lineCap='round';
+        g.beginPath();g.ellipse(x-5,y-5,48+n*25,25+n*18,n,Math.PI*1.05,Math.PI*1.65);g.stroke();
+        if(n>.65) {
+          g.fillStyle=palette.moss;g.globalAlpha=.12;
+          for(let k=0;k<3;k++){g.beginPath();g.ellipse(x+k*14,y+58-k*5,9,22,-.6+k*.4,0,7);g.fill();}
+        }
       }
     }
     g.globalAlpha=1;
-    // Fine, deterministic sediment. Only visible cells are drawn.
     for(let row=Math.floor(camera.y/65);row<Math.ceil((camera.y+H)/65);row++) {
       for(let col=Math.floor(camera.x/65);col<Math.ceil((camera.x+W)/65);col++) {
         const n=noise(col+4,row+8),x=col*65-camera.x+n*38,y=row*65-camera.y+noise(row+2,col)*45;
-        g.fillStyle=palette.edge;g.globalAlpha=0.07+n*0.08;
+        g.fillStyle='#f8f7dd';g.globalAlpha=.22+n*.12;
         g.beginPath();g.ellipse(x,y,1+n*2,1+n,n,0,7);g.fill();
       }
     }
     g.globalAlpha=1;
-    // Hanging roots frame the passage, leaving the playable floor legible.
-    for(let col=Math.floor(camera.x/270)-1;col<Math.ceil((camera.x+W)/270)+1;col++) {
-      const row=Math.max(0,Math.floor(camera.y/ROW_HEIGHT));
-      const x=col*270+noise(col,row)*95-camera.x;
-      const y=floorY(row)-ROW_HEIGHT+60-camera.y;
-      const length=38+noise(col+5,row)*70;
-      g.strokeStyle='#ae9970';g.globalAlpha=0.36;g.lineWidth=2.4;g.lineCap='round';
-      g.beginPath();g.moveTo(x,y);g.bezierCurveTo(x-25,y+20,x+18,y+length*.65,x-8,y+length);g.stroke();
-      g.lineWidth=1;g.beginPath();g.moveTo(x-3,y+length*.55);g.lineTo(x-21,y+length*.78);g.moveTo(x-3,y+length*.72);g.lineTo(x+14,y+length*.9);g.stroke();
+    // Warm roots with round leaves, anchored to each cave ceiling.
+    const firstRow=Math.max(0,Math.floor((camera.y-80)/ROW_HEIGHT));
+    const lastRow=Math.ceil((camera.y+H)/ROW_HEIGHT);
+    for(let row=firstRow;row<=lastRow;row++) {
+      for(let col=Math.floor(camera.x/300)-1;col<Math.ceil((camera.x+W)/300)+1;col++) {
+        const x=col*300+noise(col,row)*80-camera.x,y=floorY(row)-ROW_HEIGHT+68-camera.y;
+        const length=54+noise(col+5,row)*65;
+        g.globalAlpha=.3;g.strokeStyle='#998b62';g.lineWidth=3.5;g.lineCap='round';
+        g.beginPath();g.moveTo(x,y);g.bezierCurveTo(x-20,y+25,x+12,y+length*.7,x-7,y+length);g.stroke();
+        g.strokeStyle='#e8dfb1';g.lineWidth=1.2;g.beginPath();g.moveTo(x-1,y);g.quadraticCurveTo(x-14,y+30,x,y+length*.6);g.stroke();
+        g.globalAlpha=.42;g.fillStyle=palette.moss;
+        for(let k=0;k<3;k++){
+          const yy=y+length*(.35+k*.2),side=k%2?1:-1;
+          g.beginPath();g.ellipse(x+side*8,yy,11,5,side*.5,0,7);g.fill();
+        }
+      }
     }
     g.globalAlpha=1;
   }
 
-  function drawSlab(slab, palette) {
+  function drawSlab(slab,palette) {
     const points=slab.points.map(p=>({x:p.x-camera.x,y:p.y-camera.y}));
     const x1=slab.start-camera.x,x2=slab.end-camera.x,y=slab.y-camera.y;
-    if(x2 < -50 || x1 > W+50) return;
-    const gradient=g.createLinearGradient(0,y-8,0,y+65);
+    if(x2<-50||x1>W+50)return;
+    g.lineJoin='round';g.lineCap='round';
+    const gradient=g.createLinearGradient(0,y,0,y+58);
     gradient.addColorStop(0,palette.soil);gradient.addColorStop(1,palette.dark);
-    pathLine(points);g.lineTo(x2,y+48);
-    for(let x=x2-28;x>x1;x-=50)g.lineTo(x,y+48+noise(x,slab.index)*10);
-    g.lineTo(x1,y+48);g.closePath();g.fillStyle=gradient;g.fill();
-    // The rim is exactly the surface used by collision, not a floating stroke.
-    pathLine(points);g.strokeStyle=palette.dark;g.lineWidth=9;g.lineJoin='round';g.stroke();
-    pathLine(points);g.strokeStyle=palette.edge;g.lineWidth=4;g.stroke();
-    pathLine(points.map(p=>({x:p.x,y:p.y-2})));g.strokeStyle=palette.moss;g.lineWidth=3;g.stroke();
-    const start=Math.max(slab.start+16,Math.floor(camera.x/45)*45);
-    for(let x=start;x<Math.min(slab.end-10,camera.x+W+30);x+=45) {
+    pathLine(points);g.lineTo(x2,y+43);
+    for(let x=x2-24;x>x1;x-=45)g.lineTo(x,y+47+noise(x,slab.index)*6);
+    g.quadraticCurveTo(x1,y+51,x1,y+43);g.closePath();g.fillStyle=gradient;g.fill();
+    // Soft sediment layers, pebbles and occasional tiny spiral shells.
+    g.save();g.clip();
+    g.strokeStyle='#f6d2a0';g.globalAlpha=.28;g.lineWidth=2;
+    g.beginPath();g.moveTo(x1,y+19);
+    for(let x=x1+25;x<x2+25;x+=40)g.lineTo(x,y+19+Math.sin(x*.03)*2);g.stroke();
+    for(let x=Math.max(slab.start+10,Math.floor(camera.x/65)*65);x<Math.min(slab.end,camera.x+W+30);x+=65) {
       const n=noise(x,slab.index),sx=x-camera.x;
-      g.strokeStyle=palette.edge;g.globalAlpha=0.2;g.lineWidth=1;
-      g.beginPath();g.moveTo(sx,y+15+n*7);g.lineTo(sx+16,y+17+n*6);g.stroke();
-      g.globalAlpha=0.33;g.fillStyle=palette.dark;
-      g.beginPath();g.ellipse(sx+12,y+30,4+n*7,2+n*3,n,0,7);g.fill();
-      g.globalAlpha=1;
-      const s=rows[slab.index].walls.find(s=>s.top&&x>=s.x&&x<=s.x2);
-      const sy=surfaceY(s,x)-camera.y;
-      if(n>0.68)fern(sx,sy-4,0.5+n*0.4,palette.moss,n);
-      else if(n<0.2)mushroom(sx,sy-2,0.36+n,palette.edge);
+      g.globalAlpha=.65;g.fillStyle=n>.5?'#e8be8b':'#b17e59';
+      g.beginPath();g.ellipse(sx+12,y+34,5+n*6,3+n*3,n*.6,0,7);g.fill();
+      g.strokeStyle='#f5d7b0';g.lineWidth=1;g.globalAlpha=.65;
+      g.beginPath();g.ellipse(sx+11,y+33,4+n*3,2+n,0,Math.PI,Math.PI*1.7);g.stroke();
+      if(n>.86){
+        g.strokeStyle='#f5d9b3';g.lineWidth=1.5;g.beginPath();
+        for(let i=0;i<=25;i++){const a=i*.35,r=i*.18;i?g.lineTo(sx+28+Math.cos(a)*r,y+32+Math.sin(a)*r):g.moveTo(sx+28,y+32);}g.stroke();
+      }
+    }
+    g.restore();
+    // A plush moss rim; the surface coordinates remain the physics surface.
+    pathLine(points);g.strokeStyle='#7f9454';g.lineWidth=9;g.stroke();
+    pathLine(points);g.strokeStyle=palette.moss;g.lineWidth=6;g.stroke();
+    pathLine(points.map(p=>({x:p.x,y:p.y-2})));g.strokeStyle=palette.edge;g.lineWidth=2;g.stroke();
+    for(let x=Math.max(slab.start+16,Math.floor(camera.x/45)*45);x<Math.min(slab.end-10,camera.x+W+30);x+=45) {
+      const n=noise(x,slab.index),sx=x-camera.x;
+      const s=rows[slab.index].walls.find(s=>s.top&&x>=s.x&&x<=s.x2),sy=surfaceY(s,x)-camera.y;
+      if(n>.68)fern(sx,sy-3,.65+n*.35,palette.moss,n);
+      else if(n<.2)mushroom(sx,sy-2,.46+n,'#efa585');
       else {
-        g.strokeStyle=palette.moss;g.lineWidth=1.4;
-        g.beginPath();g.moveTo(sx,sy);g.lineTo(sx-3,sy-6);g.moveTo(sx+4,sy);g.lineTo(sx+7,sy-9);g.stroke();
+        g.strokeStyle=palette.moss;g.lineWidth=2;g.lineCap='round';
+        g.beginPath();g.moveTo(sx,sy);g.quadraticCurveTo(sx-5,sy-5,sx-4,sy-9);
+        g.moveTo(sx+4,sy);g.quadraticCurveTo(sx+9,sy-5,sx+8,sy-12);g.stroke();
+        if(n>.5){g.fillStyle='#dce799';g.beginPath();g.ellipse(sx+10,sy-10,4,2,-.5,0,7);g.fill();}
       }
     }
   }
@@ -341,13 +396,13 @@
     for(const slab of row.slabs)drawSlab(slab,palette);
     const edge=row.gapX-camera.x;
     if(edge>-180&&edge<W+180) {
-      glow(edge+row.gapWidth/2,y+110,110,palette.glow,0.085);
+      glow(edge+row.gapWidth/2,y+90,100,'#fff2ba',0.25);
       mushroom(edge-20,y-5,0.85,palette.glow,true);
       mushroom(edge+row.gapWidth+21,y-5,0.62,palette.glow,true);
       // Small vine and arrow appear at the actual opening.
       g.strokeStyle=palette.moss;g.lineWidth=2;
       g.beginPath();g.moveTo(edge-7,y+3);g.bezierCurveTo(edge+12,y+25,edge-5,y+41,edge+9,y+58);g.stroke();
-      g.globalAlpha=0.65;g.strokeStyle=palette.glow;g.lineWidth=2;g.lineCap='round';
+      g.globalAlpha=0.9;g.strokeStyle='#749b55';g.lineWidth=3;g.lineCap='round';
       const arrowY=y+39+Math.sin(ticks*.045)*3;
       g.beginPath();g.moveTo(edge+row.gapWidth/2,arrowY-8);g.lineTo(edge+row.gapWidth/2,arrowY+4);
       g.moveTo(edge+row.gapWidth/2-5,arrowY);g.lineTo(edge+row.gapWidth/2,arrowY+5);g.lineTo(edge+row.gapWidth/2+5,arrowY);g.stroke();
@@ -360,53 +415,88 @@
     if(x<-30||x>W+30||y<-35||y>H+35)return;
     g.save();g.translate(x,y+Math.sin(ticks*.035+o.phase)*2);
     if(o.bug) {
-      g.strokeStyle='#253b2b';g.lineWidth=1.4;
+      g.strokeStyle='#6b9151';g.lineWidth=2;g.lineCap='round';
       for(let i=-2;i<=2;i++){g.beginPath();g.moveTo(i*5,4);g.lineTo(i*5+Math.sin(ticks*.15+i)*2,9);g.stroke();}
-      for(let i=3;i>=-2;i--){g.fillStyle=i%2?'#91b972':'#b9cc87';g.beginPath();g.arc(i*4,-Math.sin(ticks*.1+i)*1.5,5.5,0,7);g.fill();}
-      g.fillStyle='#223b32';g.beginPath();g.arc(-9,-2,1.5,0,7);g.fill();
-    } else if(o.kind===0) {
-      g.rotate(-.4);g.fillStyle='#e3ba76';g.beginPath();g.moveTo(0,-11);g.bezierCurveTo(17,-5,12,12,0,11);g.bezierCurveTo(-12,6,-8,-6,0,-11);g.fill();
-      g.strokeStyle='#9c6c4d';g.lineWidth=1.3;g.beginPath();g.moveTo(0,-7);g.lineTo(0,13);g.moveTo(0,1);g.lineTo(6,-3);g.moveTo(0,6);g.lineTo(-5,1);g.stroke();
-    } else if(o.kind===1) {
-      mushroom(0,9,.65,'#dfa588');
+      for(let i=3;i>=-2;i--){
+        g.fillStyle=i%2?'#a4ca67':'#c9df84';g.strokeStyle='#82a95c';g.lineWidth=1;
+        g.beginPath();g.arc(i*4,-Math.sin(ticks*.1+i)*1.5,6,0,7);g.fill();g.stroke();
+      }
+      g.fillStyle='#fbf8e5';g.beginPath();g.arc(-10,-3,3,0,7);g.fill();
+      g.fillStyle='#49634e';g.beginPath();g.arc(-11,-3,1.6,0,7);g.fill();
+      g.fillStyle='#eda88f';g.beginPath();g.ellipse(-11,2,2,1.5,0,0,7);g.fill();
+      g.strokeStyle='#729855';g.lineWidth=1;g.beginPath();g.moveTo(-9,-7);g.quadraticCurveTo(-14,-14,-15,-10);g.stroke();
     } else {
-      glow(0,0,26,'#a4e4df',.13);
-      g.fillStyle='#7fc4c6';g.beginPath();g.moveTo(0,-12);g.lineTo(9,-3);g.lineTo(5,10);g.lineTo(-5,10);g.lineTo(-8,-3);g.closePath();g.fill();
-      g.fillStyle='#c6eee2';g.beginPath();g.moveTo(0,-12);g.lineTo(2,4);g.lineTo(-5,10);g.lineTo(-8,-3);g.closePath();g.fill();
-      g.strokeStyle='#e3f5e5';g.lineWidth=1;g.beginPath();g.moveTo(0,-9);g.lineTo(6,-3);g.stroke();
+      // A cream halo and slow sparkle distinguish treasure from planted scenery.
+      glow(0,0,23,'#fff2b4',.3);
+      const a=ticks*.015+o.phase,sx=Math.cos(a)*17,sy=Math.sin(a)*12;
+      g.strokeStyle='#fff9db';g.lineWidth=1.5;g.lineCap='round';
+      g.beginPath();g.moveTo(sx-2,sy);g.lineTo(sx+2,sy);g.moveTo(sx,sy-2);g.lineTo(sx,sy+2);g.stroke();
+      if(o.kind===0){
+        g.rotate(-.4);g.fillStyle='#f0c76b';g.strokeStyle='#b38b45';g.lineWidth=1.2;
+        g.beginPath();g.moveTo(0,-12);g.bezierCurveTo(15,-5,13,11,0,12);g.bezierCurveTo(-12,6,-9,-5,0,-12);g.fill();g.stroke();
+        g.strokeStyle='#bd974e';g.beginPath();g.moveTo(0,-8);g.lineTo(0,14);g.moveTo(0,1);g.lineTo(6,-3);g.moveTo(0,6);g.lineTo(-5,1);g.stroke();
+        g.strokeStyle='#fff0b3';g.beginPath();g.moveTo(-4,-5);g.quadraticCurveTo(-8,0,-5,5);g.stroke();
+      }else if(o.kind===1){
+        mushroom(0,9,.72,'#f4a590');
+      }else{
+        g.fillStyle='#77bfd5';g.strokeStyle='#639eb6';g.lineWidth=1.3;
+        g.beginPath();g.moveTo(0,-14);g.lineTo(10,-4);g.lineTo(7,10);g.quadraticCurveTo(0,14,-6,10);g.lineTo(-9,-3);g.closePath();g.fill();g.stroke();
+        g.fillStyle='#ccefe6';g.beginPath();g.moveTo(0,-14);g.lineTo(1,3);g.lineTo(-6,10);g.lineTo(-9,-3);g.closePath();g.fill();
+        g.strokeStyle='#f5fff3';g.lineWidth=1.8;g.beginPath();g.moveTo(1,-10);g.lineTo(6,-4);g.stroke();
+      }
     }
     g.restore();
   }
 
   function drawPlayer() {
     const x=player.x-camera.x,y=player.y-camera.y;
-    // Contact shadow anchors the character to the terrain.
-    if(player.ground){g.globalAlpha=.3;g.fillStyle='#152a26';g.beginPath();g.ellipse(x,y+22,25,4,0,0,7);g.fill();g.globalAlpha=1;}
-    g.save();g.translate(x,y);
+    if(player.ground){
+      g.globalAlpha=.18;g.fillStyle='#6d854e';g.beginPath();g.ellipse(x,y+22,24,4,0,0,7);g.fill();g.globalAlpha=1;
+    }
     const rolling=Math.abs(player.vx)>1.8||!player.ground;
-    g.rotate(rolling?spin:Math.sin(ticks*.035)*.025);
+    const angle=rolling?spin:Math.sin(ticks*.035)*.025;
     const wiggle=Math.sin(ticks*.24)*Math.min(1,Math.abs(player.vx)/3+.12);
-    g.strokeStyle='#293c38';g.lineWidth=2.8;g.lineCap='round';
+    g.save();g.translate(x,y);
+    g.rotate(angle);
+    g.strokeStyle='#546d91';g.lineWidth=2.8;g.lineCap='round';
     for(let i=-2;i<=2;i++)for(const side of [-1,1]){
-      g.beginPath();g.moveTo(i*6,side*13);g.lineTo(i*6+wiggle*(i%2?3:-3),side*21);g.lineTo(i*6+4,side*23);g.stroke();
+      g.beginPath();g.moveTo(i*6,side*13);g.lineTo(i*6+wiggle*(i%2?3:-3),side*21);g.lineTo(i*6+4,side*22);g.stroke();
     }
-    g.strokeStyle='#bfd1bb';g.lineWidth=1.8;
-    g.beginPath();g.moveTo(-7,-15);g.quadraticCurveTo(-10,-29+wiggle*2,-18,-26);g.moveTo(7,-15);g.quadraticCurveTo(12,-29-wiggle*2,19,-26);g.stroke();
-    const shell=g.createLinearGradient(-15,-18,15,18);
-    shell.addColorStop(0,'#d2debc');shell.addColorStop(.35,'#99b4a4');shell.addColorStop(1,'#506f69');
-    g.fillStyle=shell;g.strokeStyle='#2b4943';g.lineWidth=2.5;
-    g.beginPath();g.ellipse(0,0,20,21,0,0,7);g.fill();g.stroke();
-    for(let i=-3;i<=3;i++){
-      g.strokeStyle='#3f635a';g.lineWidth=1.3;g.beginPath();g.ellipse(i*4.2,1,3.3,17-Math.abs(i)*2.5,0,0,7);g.stroke();
-      g.strokeStyle='#e6e7c8';g.globalAlpha=.4;g.beginPath();g.ellipse(i*4.2-.8,-3,1.2,11-Math.abs(i)*1.6,0,Math.PI,Math.PI*2);g.stroke();g.globalAlpha=1;
+    const shell=g.createLinearGradient(-15,-18,14,20);
+    shell.addColorStop(0,'#c6d8ef');shell.addColorStop(.4,'#93b4dc');shell.addColorStop(1,'#708db9');
+    g.fillStyle=shell;g.strokeStyle='#506e99';g.lineWidth=2.4;
+    g.beginPath();g.arc(0,0,20,0,Math.PI*2);g.fill();g.stroke();
+    for(let i=-2;i<=2;i++){
+      const yy=i*6.3,half=Math.sqrt(20*20-yy*yy)-1;
+      g.strokeStyle='#698bb6';g.lineWidth=1.3;
+      g.beginPath();g.moveTo(-half,yy);g.quadraticCurveTo(0,yy+5,half,yy);g.stroke();
+      g.strokeStyle='#d9e6f6';g.lineWidth=.9;
+      g.beginPath();g.moveTo(-half+2,yy-1.5);g.quadraticCurveTo(0,yy+2,half-2,yy-1.5);g.stroke();
     }
-    g.fillStyle='#d4debe';g.beginPath();g.ellipse(0,-10,12,8,0,0,7);g.fill();
-    for(const ex of [-6,6]){
-      g.fillStyle='#f9f4dc';g.beginPath();g.arc(ex,-12,4,0,7);g.fill();
-      g.fillStyle='#203c34';g.beginPath();g.arc(ex+facing*.8,-11,2.1,0,7);g.fill();
-      g.fillStyle='white';g.beginPath();g.arc(ex+facing*.8-.5,-12,0.8,0,7);g.fill();
+    g.strokeStyle='#f0f4fb';g.lineWidth=2.3;
+    g.beginPath();g.arc(-1,-1,16,Math.PI*1.05,Math.PI*1.5);g.stroke();
+    // The shell rolls, while the friendly face remains readable.
+    g.rotate(-angle);
+    g.strokeStyle='#6282a6';g.lineWidth=2;
+    g.beginPath();g.moveTo(-8,-15);g.quadraticCurveTo(-13,-29+wiggle*2,-20,-25);
+    g.moveTo(8,-15);g.quadraticCurveTo(14,-29-wiggle*2,20,-25);g.stroke();
+    g.fillStyle='#f3cd7a';
+    for(const ax of [-20,20]){g.beginPath();g.arc(ax,-25,2.3,0,7);g.fill();}
+    g.fillStyle='#d6e7ed';g.beginPath();g.ellipse(0,-6,16,11,0,0,7);g.fill();
+    const blinking=ticks%260>251;
+    for(const ex of [-7,7]){
+      if(blinking){
+        g.strokeStyle='#415575';g.lineWidth=2;g.beginPath();g.moveTo(ex-3,-8);g.quadraticCurveTo(ex,-5,ex+3,-8);g.stroke();
+      }else{
+        g.fillStyle='#fffcf0';g.beginPath();g.ellipse(ex,-8,5.5,6,0,0,7);g.fill();
+        g.fillStyle='#3e5578';g.beginPath();g.ellipse(ex+facing*.6,-7.5,3.2,3.8,0,0,7);g.fill();
+        g.fillStyle='white';g.beginPath();g.arc(ex-1,-9,1.3,0,7);g.fill();
+      }
     }
-    g.strokeStyle='#54766a';g.lineWidth=1.2;g.beginPath();g.arc(0,-6,2.5,.15,Math.PI-.15);g.stroke();
+    g.fillStyle='#eca6a1';
+    for(const cx of [-12,12]){g.beginPath();g.ellipse(cx,0,3.3,2.1,0,0,7);g.fill();}
+    g.strokeStyle='#638199';g.lineWidth=1.4;
+    g.beginPath();g.moveTo(-3,0);g.quadraticCurveTo(0,4,3,0);g.stroke();
     g.restore();
   }
 
@@ -420,13 +510,13 @@
     for(let i=0;i<9;i++){
       const x=(noise(i,7)*WORLD_WIDTH-camera.x*.75+Math.sin(ticks*.008+i)*15)% (W+100);
       const y=(noise(i,9)*H+ticks*.07+i*37)%(H+40)-20;
-      g.globalAlpha=.2+Math.sin(ticks*.025+i)*.15;g.fillStyle='#d8eaba';g.beginPath();g.arc(x,y,1.5,0,7);g.fill();
+      g.globalAlpha=.2+Math.sin(ticks*.025+i)*.15;g.fillStyle='#fffbe0';g.beginPath();g.arc(x,y,1.5,0,7);g.fill();
     }
     g.globalAlpha=1;
     for(const m of motes){g.globalAlpha=m.life/34;g.fillStyle=m.color;g.beginPath();g.arc(m.x-camera.x,m.y-camera.y,2,0,7);g.fill();}
     g.globalAlpha=1;drawPlayer();
     const vignette=g.createRadialGradient(W*.5,H*.45,Math.min(W,H)*.2,W*.5,H*.45,Math.max(W,H)*.8);
-    vignette.addColorStop(0,'transparent');vignette.addColorStop(1,'#10251e88');g.fillStyle=vignette;g.fillRect(0,0,W,H);
+    vignette.addColorStop(0,'transparent');vignette.addColorStop(1,'#5f896318');g.fillStyle=vignette;g.fillRect(0,0,W,H);
   }
 
   function resetInput() {left=false;right=false;drag=null;}

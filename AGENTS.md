@@ -35,3 +35,9 @@
 - Initial evidence and the wide-map update are recorded in [docs/VERIFICATION.md](docs/VERIFICATION.md).
 - The wide-map update resolves the four initial issues (slow drag lift, slope drift, frame dependence and resize mismatch). These now have assertions, not merely diagnostics.
 - Browser checks at phone and landscape viewport sizes do not constitute real-device iPhone Safari verification.
+
+## Visual direction — children first
+- Keep a welcoming picture-book underground world: mint and grass greens, warm clay, rounded foliage, colorful treasure and gentle lighting.
+- The woodlouse has a blue shell, big readable eyes, rosy cheeks and a smile. Its shell rolls while the face remains readable.
+- Do not introduce realistic horror, gloomy darkness, sharp threatening forms or visually aggressive effects while polishing graphics.
+- Keep the collision outline and path clear; scenery must not hide openings. Use cream panels, large pastel buttons and simple Japanese labels.
