@@ -11,7 +11,11 @@
   const GRAVITY = 0.55;
   const JUMP_MIN = 8;
   const JUMP_MAX = 11;
-  const BOOST_JUMP = 12.5;
+  const BOOST_JUMP = 22;
+  const BOOST_SPEED = 24;
+  const BOOST_DURATION = 240;
+  const boostTrail = [];
+  let boostTicks = 0;
   const palettes = [
     { name: 'こけの おにわ', back: '#afcfb7', far: '#dce7bb', soil: '#bc895e', dark: '#92654e', edge: '#d3e897', moss: '#86b452', glow: '#fff0ae' },
     { name: 'ねっこの もり', back: '#cfc4a5', far: '#eee2b7', soil: '#c19369', dark: '#a07056', edge: '#dde9a2', moss: '#9ab460', glow: '#fff0b3' },
@@ -147,11 +151,12 @@
     player.y += uy * (player.r - distance);
     const normalVelocity = player.vx * ux + player.vy * uy;
     if (normalVelocity < 0) {
-      const bounce = uy > 0.4 ? 0.72 : 0;
+      const bounce = boostTicks > 0 ? .98 : (uy > 0.4 ? 0.72 : 0);
+      if (boostTicks > 0 && normalVelocity < -2) burst(player.x-ux*player.r,player.y-uy*player.r,'#b7edf4');
       player.vx -= (1 + bounce) * normalVelocity * ux;
       player.vy -= (1 + bounce) * normalVelocity * uy;
     }
-    if (s.top && uy < -0.65 && player.x >= s.x && player.x <= s.x2 && player.vy > -1) {
+    if (boostTicks === 0 && s.top && uy < -0.65 && player.x >= s.x && player.x <= s.x2 && player.vy > -1) {
       player.ground = s;
       player.y = restY(s, player.x);
       player.vy = 0;
@@ -185,10 +190,15 @@
 
   function update() {
     ticks++;
+    if(boostTicks > 0)boostTicks--;
     if(evolution.pulse > 0)evolution.pulse--;
     const direction = drag ? clamp((drag.x - drag.startX) / 65, -1, 1) : Number(right) - Number(left);
     const active = Math.abs(direction) > 0.08;
-    if (active) {
+    if (boostTicks > 0) {
+      // Preserve reflected momentum even when a direction is held.
+      player.vx *= .998;
+      if(Math.abs(player.vx)>.1)facing=Math.sign(player.vx);
+    } else if (active) {
       player.vx += direction * 0.48;
       player.vx *= 0.965;
       facing = direction < 0 ? -1 : 1;
@@ -203,12 +213,19 @@
         burst(player.x,player.y+18,patch.kind === 'mud' ? '#d2a57f' : '#b7f2ee');
     }
     const horizontalLimit = patch ? (patch.kind === 'mud' ? 4 : 6) : (!player.ground && !active ? 14 : 8.5);
-    player.vx = clamp(player.vx, -horizontalLimit, horizontalLimit);
-    player.vy = Math.min(18, player.vy + GRAVITY);
+    if(boostTicks > 0){
+      player.vy += GRAVITY;
+      const speed=Math.hypot(player.vx,player.vy);
+      if(speed>34){player.vx*=34/speed;player.vy*=34/speed;}
+    }else{
+      player.vx = clamp(player.vx, -horizontalLimit, horizontalLimit);
+      player.vy = Math.min(18, player.vy + GRAVITY);
+    }
 
     const oldX = player.x;
-    for (let step = 0; step < 5; step++) {
-      player.x += player.vx / 5;
+    const substeps=Math.max(5,Math.ceil(Math.hypot(player.vx,player.vy)/5));
+    for (let step = 0; step < substeps; step++) {
+      player.x += player.vx / substeps;
       if (player.ground && player.vy >= 0) {
         const support = groundAt(player.x, player.y);
         if (support) {
@@ -217,16 +234,18 @@
           player.vy = 0;
         } else player.ground = null;
       }
-      if (!player.ground) player.y += player.vy / 5;
+      if (!player.ground) player.y += player.vy / substeps;
       for (const row of nearbyRows()) {
-        if (player.y < row.y - 45 || player.y > row.y + 95) continue;
+        if (player.y < row.y - 60 || player.y > row.y + 95) continue;
         for (const s of row.walls) collision(s);
       }
-      if (player.x < player.r + 4) { player.x = player.r + 4; player.vx = Math.abs(player.vx) * 0.35; }
-      if (player.x > WORLD_WIDTH - player.r - 4) { player.x = WORLD_WIDTH - player.r - 4; player.vx = -Math.abs(player.vx) * 0.35; }
-      if (player.y < player.r + 4) { player.y = player.r + 4; player.vy = Math.abs(player.vy) * 0.72; }
+      if (player.x < player.r + 4) { player.x = player.r + 4; player.vx = Math.abs(player.vx) * (boostTicks > 0 ? .98 : .35); }
+      if (player.x > WORLD_WIDTH - player.r - 4) { player.x = WORLD_WIDTH - player.r - 4; player.vx = -Math.abs(player.vx) * (boostTicks > 0 ? .98 : .35); }
+      if (player.y < player.r + 4) { player.y = player.r + 4; player.vy = Math.abs(player.vy) * (boostTicks > 0 ? .98 : .72); }
     }
     if (player.ground) groundedTick = ticks;
+    if(boostTicks > 0)boostTrail.push({x:player.x,y:player.y,life:16});
+    for(let i=boostTrail.length-1;i>=0;i--)if(--boostTrail[i].life<=0)boostTrail.splice(i,1);
     spin += (player.x - oldX) / player.r;
     charge = Math.min(100, charge + Math.abs(player.x - oldX) * 0.045);
     if (player.y > floorY(rows.length - 5)) addRows(20);
@@ -279,9 +298,9 @@
 
   function updateBoostUI() {
     uiTick = ticks;
-    boostButton.disabled = charge < 100;
+    boostButton.disabled = charge < 100 || boostTicks > 0;
     boostButton.style.setProperty('--charge', charge + '%');
-    boostButton.setAttribute('aria-label', charge >= 100 ? 'ぐるぐる発動' : 'ぐるぐる充電中');
+    boostButton.setAttribute('aria-label', boostTicks > 0 ? 'ぐるぐる飛行中' : (charge >= 100 ? 'ぐるぐる発動' : 'ぐるぐる充電中'));
   }
 
   function pathLine(points) {
@@ -858,7 +877,14 @@
     }
     g.globalAlpha=1;
     for(const m of motes){g.globalAlpha=m.life/34;g.fillStyle=m.color;g.beginPath();g.arc(m.x-camera.x,m.y-camera.y,2,0,7);g.fill();}
-    g.globalAlpha=1;drawPlayer();
+    g.globalAlpha=1;
+    for(const point of boostTrail){
+      g.globalAlpha=point.life/16*.32;g.fillStyle='#d3f6fa';
+      g.beginPath();g.arc(point.x-camera.x,point.y-camera.y,player.r*(point.life/24+.25),0,Math.PI*2);g.fill();
+    }
+    g.globalAlpha=1;
+    if(boostTicks>0)glow(player.x-camera.x,player.y-camera.y,48,'#c9f2ff',.3);
+    drawPlayer();
     for(const pop of pickupPops){
       g.save();g.globalAlpha=Math.min(1,pop.life/15);
       if(pop.animalKind)drawFriend({...pop,kind:pop.animalKind,y:pop.y+20,hello:1});
@@ -893,6 +919,7 @@
   }
   function pointerUp(e) {
     if(!drag||drag.id!==e.pointerId)return;
+    if(boostTicks>0){drag=null;return;}
     const fresh = performance.now() - drag.lastT < 150;
     const dx = e.clientX - drag.startX;
     const dy = e.clientY - drag.startY;
@@ -911,8 +938,9 @@
     drag=null;
   }
   function boost() {
-    if(charge<100)return;
-    charge=0;drag=null;jump(BOOST_JUMP,true);player.vx=facing*8.5;
+    if(charge<100||boostTicks>0)return;
+    charge=0;drag=null;jump(BOOST_JUMP,true);player.vx=facing*BOOST_SPEED;
+    boostTicks=BOOST_DURATION;boostTrail.length=0;
     burst(player.x,player.y,'#f6dfa2');updateBoostUI();
   }
 

@@ -43,7 +43,7 @@
 - Keep the collision outline and path clear; scenery must not hide openings. Use a large pastel icon-only boost button. The child cannot read: show no visible letters, labels, numbers, title, HUD or instructions. Movement is by dragging; do not restore left/right touch buttons.
 
 ## Jump, treasure and friendly wildlife (2026-10-12)
-- Gravity is 0.55 px per fixed step squared. Normal flick launch is capped at 8–11 px/step; keyboard launch is 9.5; boost is 12.5.
+- Gravity is 0.55 px per fixed step squared. Normal flick launch is capped at 8–11 px/step; keyboard launch is 9.5; boost launches at vertical speed 22 and horizontal speed 24 with temporary ricochet physics (see below).
 - Normal jumping requires ground or a 7-step edge grace period. Consuming a jump clears the grace period; flicks cannot repeatedly lift the player in mid-air. Boost may launch in mid-air.
 - Normal maximum rise is about 100px. Preserve grounded rest, slow-drag behavior and ceiling bounce.
 - Collectible treasure is drawn at 1.75x with a ring/glow, positioned 43px above the floor (crystals now float higher; see aerial crystals below), and collected within 44px. Caterpillars retain their existing behavior.
@@ -81,3 +81,9 @@
 - Crystals float 94 or 116px above their local floor, within normal jump reach. Other treasure remains 43px above ground.
 - Evolution uses 10 crystals per form (final at 50); bright larger rings, eighteen stars, twelve rays and a 150px glow remain local to the character. No full-screen flash, pause, text or physics changes.
 - Temporary transformation showcase is local-only at /tmp/dango-terrain-preview; never publish its injected state.
+
+## Pinball boost
+- Full charge launches toward facing at vx=24 and vy=-22 for 240 steps (~4s). Boost may start airborne but cannot restart while active.
+- During boost, all slab tops, undersides, sides and world bounds reflect velocity along the contact normal with .98 restitution. Skip grounded snapping, normal drag/speed caps and flick overrides; keep gravity .55 and cap total speed at 34. Held input must not cancel reflected momentum.
+- Collision substeps adapt to speed (at least five, at most 5px travel per substep). Include raised hills in the collision broad phase.
+- A short pale blue trail and contact sparkles identify flight. No text, flash, pause, lethal effects or hitbox change. After expiry, normal jump/drag, grounded support and water/mud behavior resume.

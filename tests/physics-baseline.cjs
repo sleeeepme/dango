@@ -43,8 +43,8 @@ function game(width = 390, height = 844) {
   const hook = '  requestAnimationFrame(frame);\n})();';
   assert.ok(source.endsWith(hook + '\n'), 'Update the test harness for changed entry point');
   vm.runInContext(source.replace(hook,
-    '  globalThis.test = {player,camera,rows,loot,update,frame,resize,collision,restY,boost,fauna,pickupPops,drawSlab,palettes,forms,evolution,collectedAnimals,drawPlayer,patchAt,WORLD_WIDTH,STEP_MS,' +
-    'controls:(l,r)=>{left=l;right=r},charge:v=>charge=v,state:()=>({drag,left,right,charge,score,ticks})};\n})();'), context);
+    '  globalThis.test = {player,camera,rows,loot,update,frame,resize,collision,restY,boost,fauna,pickupPops,drawSlab,palettes,forms,evolution,collectedAnimals,drawPlayer,patchAt,boostTrail,WORLD_WIDTH,STEP_MS,' +
+    'controls:(l,r)=>{left=l;right=r},charge:v=>charge=v,state:()=>({drag,left,right,charge,score,ticks,boostTicks})};\n})();'), context);
   return {
     ...context.test,
     elements,
@@ -126,7 +126,7 @@ test('ceiling collision bounces and boost still requires 100 percent', () => {
   const t=game();Object.assign(t.player,{x:1100,y:375,vx:0,vy:-15,ground:null});
   t.step(2);assert.ok(t.player.vy>0);
   t.settle();t.charge(99);t.boost();assert.equal(t.state().charge,99);
-  t.charge(100);t.boost();assert.equal(t.state().charge,0);assert.equal(t.player.vy,-12.5);
+  t.charge(100);t.boost();assert.equal(t.state().charge,0);assert.equal(t.player.vy,-22);
   assert.equal(t.player.ground,null);
 });
 test('walking to an exit descends and following exits require a turn', () => {
@@ -389,4 +389,62 @@ test('airborne crystals require a jump and are reachable within the normal jump 
   Object.assign(t.player,{x:item.x,y:t.restY(s,item.x),vx:0,vy:0,ground:s});
   t.step(10);assert.equal(item.got,false);
   t.event('window','keydown',{key:' '});t.step(20);assert.equal(item.got,true);
+});
+
+
+test('charged boost launches strongly, lasts four seconds, and returns to normal rest',()=>{
+  const t=game();t.settle();t.charge(100);t.boost();
+  assert.equal(t.player.vx,24);assert.equal(t.player.vy,-22);assert.equal(t.state().boostTicks,240);
+  t.player.vx=0;let bounces=0,last=t.player.vy;
+  for(let i=0;i<230;i++){
+    t.step();if(last*t.player.vy<0&&Math.abs(t.player.vy-last)>8)bounces++;
+    last=t.player.vy;assert.ok(!t.player.ground);assert.ok(t.player.y>=24&&t.player.y<=301);
+  }
+  assert.ok(bounces>=5,'Boost should repeatedly ricochet between the top and floor');
+  assert.ok(t.boostTrail.length>0&&t.boostTrail.length<=16);
+  t.step(300);assert.equal(t.state().boostTicks,0);assert.equal(t.boostTrail.length,0);
+  assert.ok(t.player.ground);assert.equal(t.player.vy,0);assert.equal(t.player.r,20);
+});
+test('boost reflects from floor, underside, side and slopes while preserving tangent motion',()=>{
+  for(const s of [
+    {x:0,y:300,x2:1000,y2:300,top:true},
+    {x:0,y:300,x2:1000,y2:300,top:false},
+    {x:500,y:0,x2:500,y2:1000,top:false},
+    {x:0,y:300,x2:1000,y2:100,top:true},
+  ]){
+    const t=game();t.charge(100);t.boost();
+    const dx=s.x2-s.x,dy=s.y2-s.y,len=Math.hypot(dx,dy),tx=dx/len,ty=dy/len;
+    let nx=-ty,ny=tx;if(s.top){nx=-nx;ny=-ny;}
+    Object.assign(t.player,{x:(s.x+s.x2)/2+nx*19,y:(s.y+s.y2)/2+ny*19,vx:-nx*20+tx*8,vy:-ny*20+ty*8,ground:null});
+    t.collision(s);
+    assert.ok(Math.abs(t.player.vx*nx+t.player.vy*ny-19.6)<1e-8);
+    assert.ok(Math.abs(t.player.vx*tx+t.player.vy*ty-8)<1e-8);
+    assert.equal(t.player.ground,null);
+  }
+});
+test('high-speed boost bounces at world edges and slab sides without tunnelling',()=>{
+  for(const [x,vx,sign] of [[30,-30,1],[2210,30,-1]]){
+    const t=game();t.charge(100);t.boost();Object.assign(t.player,{x,y:180,vx,vy:0});
+    t.controls(vx<0,vx>0);t.step();assert.equal(Math.sign(t.player.vx),sign);assert.ok(Math.abs(t.player.vx)>28);
+  }
+  const t=game(),r=t.rows[0];t.charge(100);t.boost();
+  Object.assign(t.player,{x:r.gapX+35,y:r.y+26,vx:-32,vy:0});t.step();
+  assert.ok(t.player.vx>30);assert.ok(t.player.x>=r.gapX+20);
+  t.resizeTo(844,390);assert.equal(t.state().boostTicks,239);
+});
+
+
+test('boost momentum survives held input and flicks, with identical motion at different frame rates',()=>{
+  const states=[];
+  for(const hz of [30,60,120]){
+    const t=game();t.settle();t.charge(100);t.boost();t.controls(true,false);
+    const vx=t.player.vx,vy=t.player.vy;
+    t.event('canvas','pointerdown',{},2000);t.event('canvas','pointermove',{clientX:105},2050);
+    t.event('canvas','pointerup',{clientX:105},2051);
+    assert.equal(t.player.vx,vx);assert.equal(t.player.vy,vy);
+    t.charge(100);t.boost();assert.equal(t.state().boostTicks,240,'Cannot restart while flying');
+    t.frame(0);for(let i=1;i<=hz;i++)t.frame(i*1000/hz);
+    states.push([t.player.x,t.player.y,t.player.vx,t.player.vy,t.state().boostTicks]);
+  }
+  assert.deepEqual(states[0],states[1]);assert.deepEqual(states[1],states[2]);
 });

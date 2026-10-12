@@ -197,3 +197,11 @@ AGENTS.mdの「slow upward drag should not let it fly」と不一致。ドラッ
 - `node --check game.js`, `node --test tests/physics-baseline.cjs`: 26 tests passed. New assertions cover climbing both ways, stationary slope support, water/mud speed and escape, and airborne crystal pickup. Existing flick, collision, timing, resize and rendering checks still pass.
 - Browser at 1280×720: moved through mud, jumped to collect an aerial crystal, explored to the first opening and descended onto the next hilly floor; no console warnings/errors. Local-only transformation showcase visually confirmed the larger rings/stars/rays. A requested viewport override did not resize this browser surface, so no new phone-sized browser verification is claimed.
 - iPhone Safari real-device testing has not been performed.
+
+
+## 2026-10-12 — Pinball boost
+- Full-charge button launches vx=24, vy=-22 for 240 steps. .98 contact-normal reflection applies to floor, underside, side and world bounds while boosted. Gravity stays .55; total speed cap 34; normal grounded support resumes after expiry.
+- Adaptive collision substeps keep each movement below 5px and broad-phase includes 32px hills. Pale blue trail and collision sparkles remain local and text-free.
+- Syntax and 30 regression tests cover repeated bounces and eventual rest, tangent-preserving reflections including slopes, slab/world side collisions without tunnelling, boost gating/input and identical boosted motion at 30/60/120Hz. Previous touch/jump, water/mud, evolution and rendering assertions remain.
+- Browser 1280×720 with production game code: ordinary exploration filled charge; icon button started flight and disabled itself; trail visibly folded at an underside contact, and flight ended on supported ground. Console warnings/errors: none. No test state hook was used for browser play.
+- iPhone Safari real-device testing has not been performed.
