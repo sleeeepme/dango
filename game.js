@@ -368,13 +368,17 @@
     const gradient=g.createLinearGradient(0,y,0,y+58);
     gradient.addColorStop(0,palette.soil);gradient.addColorStop(1,palette.dark);
     pathLine(points);g.lineTo(x2,y+43);
-    for(let x=x2-24;x>x1;x-=45)g.lineTo(x,y+47+noise(x,slab.index)*6);
+    // Sample the fixed world coordinate, never the camera-relative position.
+    for(let worldX=slab.end-24;worldX>slab.start;worldX-=45)
+      g.lineTo(worldX-camera.x,y+47+noise(worldX,slab.index)*6);
     g.quadraticCurveTo(x1,y+51,x1,y+43);g.closePath();g.fillStyle=gradient;g.fill();
     // Soft sediment layers, pebbles and occasional tiny spiral shells.
     g.save();g.clip();
     g.strokeStyle='#f6d2a0';g.globalAlpha=.28;g.lineWidth=2;
-    g.beginPath();g.moveTo(x1,y+19);
-    for(let x=x1+25;x<x2+25;x+=40)g.lineTo(x,y+19+Math.sin(x*.03)*2);g.stroke();
+    g.beginPath();g.moveTo(x1,y+19+Math.sin(slab.start*.03)*2);
+    for(let worldX=slab.start+25;worldX<slab.end+25;worldX+=40)
+      g.lineTo(worldX-camera.x,y+19+Math.sin(worldX*.03)*2);
+    g.stroke();
     for(let x=Math.max(slab.start+10,Math.floor(camera.x/65)*65);x<Math.min(slab.end,camera.x+W+30);x+=65) {
       const n=noise(x,slab.index),sx=x-camera.x;
       g.globalAlpha=.65;g.fillStyle=n>.5?'#e8be8b':'#b17e59';

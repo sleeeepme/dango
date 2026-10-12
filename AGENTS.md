@@ -55,3 +55,7 @@
 - A quick sideways release launches with horizontal speed 10–14 and a low jump (vertical launch 7) when grounded. Preserve this alongside upward flicks and held drag movement.
 - Airborne sideways flicks steer horizontally without resetting vertical velocity. Do not restore repeated upward mid-air jumps.
 - Inactive air motion permits the release impulse up to 14; normal active drag/keyboard and grounded movement remain capped at 8.5. Landing friction stops the player.
+
+## Stable terrain rendering
+- Sample platform underside noise and soil-layer waves from fixed world coordinates, then subtract camera coordinates only for rendering. Never use screen coordinates as procedural shape seeds: tiny follow-camera changes caused continuous underside jitter.
+- The rendering regression test records platform contour paths and compares their world positions across camera offsets and animation ticks.

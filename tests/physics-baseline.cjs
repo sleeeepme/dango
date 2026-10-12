@@ -9,8 +9,15 @@ function game(width = 390, height = 844) {
   const listeners = {};
   const elements = {};
   const gradient = {addColorStop() {}};
+  let capture=false,currentPath=[];
+  const filledPaths=[];
   const drawing = new Proxy({}, {
-    get: (_, name) => name.startsWith('create') ? () => gradient : () => {},
+    get: (_, name) => name.startsWith('create') ? () => gradient : (...args) => {
+      if(!capture)return;
+      if(name==='beginPath')currentPath=[];
+      if(['moveTo','lineTo','quadraticCurveTo','closePath'].includes(name))currentPath.push([name,...args]);
+      if(name==='fill')filledPaths.push(currentPath.map(part=>[...part]));
+    },
     set: () => true,
   });
   for (const id of ['canvas','boost']) {
@@ -36,11 +43,17 @@ function game(width = 390, height = 844) {
   const hook = '  requestAnimationFrame(frame);\n})();';
   assert.ok(source.endsWith(hook + '\n'), 'Update the test harness for changed entry point');
   vm.runInContext(source.replace(hook,
-    '  globalThis.test = {player,camera,rows,loot,update,frame,resize,collision,restY,boost,fauna,pickupPops,WORLD_WIDTH,STEP_MS,' +
+    '  globalThis.test = {player,camera,rows,loot,update,frame,resize,collision,restY,boost,fauna,pickupPops,drawSlab,palettes,WORLD_WIDTH,STEP_MS,' +
     'controls:(l,r)=>{left=l;right=r},charge:v=>charge=v,state:()=>({drag,left,right,charge,score,ticks})};\n})();'), context);
   return {
     ...context.test,
     elements,
+    captureSlab(slab,x,y){
+      filledPaths.length=0;capture=true;context.test.camera.x=x;context.test.camera.y=y;
+      try{context.test.drawSlab(slab,context.test.palettes[0]);}
+      finally{capture=false;}
+      return filledPaths[0];
+    },
     step(n = 1) {for (let i = 0; i < n; i++) {now += 1000/60;context.test.update();}},
     event(id, type, args = {}, time = now) {
       now = time;
@@ -239,4 +252,24 @@ test('sideways flick can steer in the air without adding upward force', () => {
   t.event('canvas','pointerup',{clientX:105},2251);
   assert.equal(t.player.vy,vy);assert.equal(t.player.vx,-14);
   assert.equal(t.player.ground,null);
+});
+
+test('platform underside keeps the same world shape while the camera moves', () => {
+  const t=game(),slab=t.rows[0].slabs[0];
+  const shapeAt=(x,y)=>{
+    const shape=t.captureSlab(slab,x,y);
+    return shape.map(([op,...coords])=>[op,...coords.map((v,i)=>v+(i%2?y:x))]);
+  };
+  const baseline=shapeAt(0,0);
+  for(const [x,y] of [[0.0001,0.0002],[0.03,0.07],[5,11],[37.7,48.3]]){
+    const actual=shapeAt(x,y);
+    assert.equal(actual.length,baseline.length);
+    for(let i=0;i<baseline.length;i++){
+      assert.equal(actual[i][0],baseline[i][0]);
+      for(let j=1;j<baseline[i].length;j++)
+        assert.ok(Math.abs(actual[i][j]-baseline[i][j])<1e-7,'Camera motion must only translate the platform');
+    }
+  }
+  t.step(120);
+  assert.deepEqual(shapeAt(0,0),baseline,'Animation ticks must not reshape terrain');
 });
