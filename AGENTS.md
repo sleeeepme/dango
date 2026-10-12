@@ -59,3 +59,12 @@
 ## Stable terrain rendering
 - Sample platform underside noise and soil-layer waves from fixed world coordinates, then subtract camera coordinates only for rendering. Never use screen coordinates as procedural shape seeds: tiny follow-camera changes caused continuous underside jitter.
 - The rendering regression test records platform contour paths and compares their world positions across camera offsets and animation ticks.
+
+## Crystal evolution (2026-10-12)
+- Every 5 collected crystals advances appearance: normal -> robot (5) -> super (10) -> dragon (15) -> masked rider (20) -> silver/red giant hero (25).
+- EVOLUTION_EVERY, evolution and forms are private game state. Only non-bug kind=2 collectibles increment crystal count.
+- Keep the final form after 25 crystals. Further multiples of 5 celebrate without reverting. Progress is session-only, matching the existing game.
+- Every floor includes at least 3 crystals, including the first. Leaves, mushrooms and collectible caterpillars keep their existing rewards.
+- Evolutions have distinct silhouettes/accessories, gentle ring/star effects and small crystal pictures near the character; no visible text, numeric counters or HUD panels.
+- Preserve all physics and radius=20 across every form, including low sideways flicks, limited upward jumps and grounded rest.
+- The six-form inspection gallery is local-only under /tmp/dango-evolution-preview. Do not expose its test state hook in production.

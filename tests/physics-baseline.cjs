@@ -43,7 +43,7 @@ function game(width = 390, height = 844) {
   const hook = '  requestAnimationFrame(frame);\n})();';
   assert.ok(source.endsWith(hook + '\n'), 'Update the test harness for changed entry point');
   vm.runInContext(source.replace(hook,
-    '  globalThis.test = {player,camera,rows,loot,update,frame,resize,collision,restY,boost,fauna,pickupPops,drawSlab,palettes,WORLD_WIDTH,STEP_MS,' +
+    '  globalThis.test = {player,camera,rows,loot,update,frame,resize,collision,restY,boost,fauna,pickupPops,drawSlab,palettes,forms,evolution,drawPlayer,WORLD_WIDTH,STEP_MS,' +
     'controls:(l,r)=>{left=l;right=r},charge:v=>charge=v,state:()=>({drag,left,right,charge,score,ticks})};\n})();'), context);
   return {
     ...context.test,
@@ -272,4 +272,57 @@ test('platform underside keeps the same world shape while the camera moves', () 
   }
   t.step(120);
   assert.deepEqual(shapeAt(0,0),baseline,'Animation ticks must not reshape terrain');
+});
+
+test('only crystals evolve the player at every five pickups, with no duplicate counting', () => {
+  const t=game();t.settle();for(const item of t.loot)item.got=true;
+  const collect=kind=>{
+    const item={x:t.player.x,y:t.player.y,got:false,kind,row:0,phase:0};
+    t.loot.push(item);t.step();return item;
+  };
+  collect(0);collect(1);assert.equal(t.evolution.crystals,0);assert.equal(t.evolution.stage,0);
+  for(let count=1;count<=30;count++){
+    const item=collect(2);
+    assert.equal(item.got,true);assert.equal(t.evolution.crystals,count);
+    assert.equal(t.evolution.stage,Math.min(5,Math.floor(count/5)));
+    t.step(2);assert.equal(t.evolution.crystals,count,'Already collected crystal must not count again');
+    if(count%5===0)assert.ok(t.evolution.pulse>0);
+  }
+  assert.equal(t.forms[t.evolution.stage].id,'ultra');
+  t.step(130);assert.equal(t.evolution.pulse,0);assert.equal(t.evolution.stage,5);
+});
+
+test('all evolution forms render and retain jump, flick and collision behavior', () => {
+  const t=game();t.settle();
+  const ids=['normal','robot','super','dragon','rider','ultra'];
+  assert.deepEqual(Array.from(t.forms.map(f=>f.id)),ids);
+  for(let stage=0;stage<ids.length;stage++){
+    t.evolution.stage=stage;t.evolution.crystals=stage*5;t.evolution.pulse=70;
+    t.drawPlayer();
+    assert.equal(t.player.r,20);
+    t.event('canvas','pointerdown',{},2000);
+    t.event('canvas','pointermove',{clientY:220},2050);
+    t.event('canvas','pointerup',{clientY:220},2051);
+    assert.equal(t.player.vy,-11);assert.equal(t.player.ground,null);
+    t.step(100);assert.equal(t.player.vy,0);assert.ok(t.player.ground);
+    t.event('canvas','pointerdown',{},4000);
+    t.event('canvas','pointermove',{clientX:285},4050);
+    t.event('canvas','pointerup',{clientX:285},4051);
+    assert.equal(t.player.vx,14);assert.equal(t.player.vy,-7);
+    t.step(160);
+    // Return to the same solid surface for the next form's input checks.
+    const s=t.rows[0].walls.find(s=>s.top&&1060>=s.x&&1060<=s.x2);
+    Object.assign(t.player,{x:1060,y:t.restY(s,1060),vx:0,vy:0,ground:s});
+    t.step();
+  }
+});
+
+test('crystals appear on the first floor and throughout extended maps', () => {
+  const t=game();
+  for(const row of t.rows){
+    const crystals=t.loot.filter(o=>o.row===row.index&&!o.bug&&o.kind===2);
+    assert.ok(crystals.length>=3,'Every floor needs enough visible collectible crystals');
+    for(const item of crystals)
+      assert.ok(row.walls.some(s=>s.top&&item.x>=s.x&&item.x<=s.x2));
+  }
 });
