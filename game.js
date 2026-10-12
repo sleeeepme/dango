@@ -167,7 +167,8 @@
       player.vx *= player.ground ? 0.81 : 0.98;
       if (Math.abs(player.vx) < 0.08) player.vx = 0;
     }
-    player.vx = clamp(player.vx, -8.5, 8.5);
+    const horizontalLimit = !player.ground && !active ? 14 : 8.5;
+    player.vx = clamp(player.vx, -horizontalLimit, horizontalLimit);
     player.vy = Math.min(18, player.vy + GRAVITY);
 
     const oldX = player.x;
@@ -682,10 +683,20 @@
   }
   function pointerUp(e) {
     if(!drag||drag.id!==e.pointerId)return;
-    if(e.clientY-drag.startY < -35 && performance.now()-drag.lastT < 150 && drag.vy < -4){
+    const fresh = performance.now() - drag.lastT < 150;
+    const dx = e.clientX - drag.startX;
+    const dy = e.clientY - drag.startY;
+    if (fresh && dy < -35 && drag.vy < -4) {
       if (jump(clamp(-drag.vy * 0.6, JUMP_MIN, JUMP_MAX))) {
         player.vx=clamp(player.vx+drag.vx*.35,-8.5,8.5);
       }
+    } else if (fresh && Math.abs(dx) > 35 && Math.abs(drag.vx) > 4) {
+      // A sideways flick is a short, low launch, not just a held drag.
+      // Mid-air steering retains its vertical velocity: no repeated lift.
+      jump(7);
+      const direction = Math.sign(drag.vx);
+      player.vx = direction * clamp(Math.abs(drag.vx) * 0.85, 10, 14);
+      facing = direction;
     }
     drag=null;
   }

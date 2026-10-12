@@ -201,3 +201,42 @@ test('friendly beetles, mantises and animals move safely on solid floors', () =>
     t.player.y=o.y-20;t.player.x=o.x;t.player.ground=null;t.resizeTo(390,844);t.frame(0);
   }
 });
+
+test('quick sideways flicks launch in both directions and naturally settle', () => {
+  for(const direction of [-1,1]){
+    const t=game();t.settle();const startX=t.player.x,startY=t.player.y;
+    t.event('canvas','pointerdown',{},2000);
+    t.event('canvas','pointermove',{clientX:195+direction*90},2050);
+    t.event('canvas','pointerup',{clientX:195+direction*90},2051);
+    assert.equal(t.player.vx,14*direction);assert.equal(t.player.vy,-7);
+    assert.equal(t.player.ground,null);
+    t.step(10);
+    assert.ok((t.player.x-startX)*direction>100,'Release momentum must persist');
+    assert.ok(startY-t.player.y>30&&startY-t.player.y<50,'Sideways launch must stay low');
+    t.step(150);
+    assert.equal(t.player.vx,0);assert.equal(t.player.vy,0);assert.ok(t.player.ground);
+    assert.equal(t.player.y,startY);
+  }
+});
+test('slow, stale or cancelled sideways gestures do not launch', () => {
+  for(const [duration,pause,type] of [[500,1,'pointerup'],[50,200,'pointerup'],[50,1,'pointercancel']]){
+    const t=game();t.settle();
+    t.event('canvas','pointerdown',{},2000);
+    t.event('canvas','pointermove',{clientX:285},2000+duration);
+    t.event('canvas',type,{clientX:285},2000+duration+pause);
+    assert.equal(t.player.vy,0);assert.equal(t.player.vx,0);
+    assert.ok(t.player.ground);assert.equal(t.state().drag,null);
+  }
+});
+test('sideways flick can steer in the air without adding upward force', () => {
+  const t=game();t.settle();
+  t.event('canvas','pointerdown',{},2000);
+  t.event('canvas','pointermove',{clientY:220},2050);
+  t.event('canvas','pointerup',{clientY:220},2051);
+  t.step(8);const vy=t.player.vy;
+  t.event('canvas','pointerdown',{},2200);
+  t.event('canvas','pointermove',{clientX:105},2250);
+  t.event('canvas','pointerup',{clientX:105},2251);
+  assert.equal(t.player.vy,vy);assert.equal(t.player.vx,-14);
+  assert.equal(t.player.ground,null);
+});

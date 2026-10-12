@@ -50,3 +50,8 @@
 - A successful treasure pickup shows its picture above the player at 2x for 48 steps and then fades; no text or numbers.
 - Friendly fauna are separate from loot: rhinoceros beetle, stag beetle, mantis, ladybug, frog, snail and butterfly. They move gently, greet nearby players and never attack, block or disappear as pickups.
 - Place friends between treasures so larger icons do not hide faces or distinctive horns.
+
+## Horizontal flick regression guard
+- A quick sideways release launches with horizontal speed 10–14 and a low jump (vertical launch 7) when grounded. Preserve this alongside upward flicks and held drag movement.
+- Airborne sideways flicks steer horizontally without resetting vertical velocity. Do not restore repeated upward mid-air jumps.
+- Inactive air motion permits the release impulse up to 14; normal active drag/keyboard and grounded movement remain capped at 8.5. Landing friction stops the player.
