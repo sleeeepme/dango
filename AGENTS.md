@@ -34,3 +34,10 @@
 - Test on iPhone Safari, or ask user for feedback on actual play feel.
 - Improve terrain variety and resting physics as necessary.
 - Continue feature requests in GitHub with automatic Vercel deployments.
+
+## Codex verification baseline (2026-10-12)
+
+- Initial implementation and production inspected at main `2c045f1`; Vercel production was READY and matched that commit.
+- See [docs/VERIFICATION.md](docs/VERIFICATION.md) for evidence and remaining issues: slow upward drag lifts/holds the player, slope contact correction drifts despite vx=0, frame-rate-dependent physics, and terrain not adapting to resize.
+- Run `node --check game.js` and `node --test tests/physics-baseline.cjs`. The diagnostic case reports known issues; passing baseline tests do not mean those issues are fixed.
+- Browser verification at 390x844 is not real-device iPhone Safari verification.
