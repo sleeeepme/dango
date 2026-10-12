@@ -13,7 +13,7 @@ function game(width = 390, height = 844) {
     get: (_, name) => name.startsWith('create') ? () => gradient : () => {},
     set: () => true,
   });
-  for (const id of ['canvas','depth','score','biome','boost','tip','map-track','energy','left','right']) {
+  for (const id of ['canvas','boost']) {
     elements[id] = {
       style: {setProperty() {}},
       addEventListener(type, handler) {listeners[id + ':' + type] = handler;},
@@ -72,12 +72,12 @@ test('player rests on flat ground and shallow humps without drift', () => {
   const x=t.player.x,y=t.player.y;t.step(600);
   assert.equal(t.player.x,x);assert.equal(t.player.y,y);
 });
-test('both buttons move and releasing them stops on the floor', () => {
+test('keyboard direction input moves and releasing it stops on the floor', () => {
   for(const direction of [-1,1]){
     const t=game();t.settle();const start=t.player.x;
-    t.controls(direction<0,direction>0);t.step(25);
+    t.event('window','keydown',{key:direction<0?'ArrowLeft':'ArrowRight'});t.step(25);
     assert.ok((t.player.x-start)*direction>80);
-    t.controls(false,false);t.step(120);
+    t.event('window','keyup',{key:direction<0?'ArrowLeft':'ArrowRight'});t.step(120);
     assert.equal(t.player.vx,0);assert.equal(t.player.vy,0);
     assert.ok(t.player.ground);
   }

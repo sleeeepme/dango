@@ -3,12 +3,7 @@
 
   const canvas = document.querySelector('canvas');
   const g = canvas.getContext('2d');
-  const depthLabel = document.getElementById('depth');
-  const scoreLabel = document.getElementById('score');
-  const biomeLabel = document.getElementById('biome');
   const boostButton = document.getElementById('boost');
-  const tip = document.getElementById('tip');
-  const mapTrack = document.getElementById('map-track');
   const WORLD_WIDTH = 2240;
   const ROW_HEIGHT = 330;
   const FIRST_FLOOR = 320;
@@ -27,8 +22,7 @@
   const motes = [];
   let W = 390, H = 844, ticks = 0, spin = 0, charge = 0, score = 0;
   let left = false, right = false, drag = null, facing = 1;
-  let lastTime = null, accumulator = 0, hudTick = -1, maxDepth = 0;
-  let exploredMin = player.x, exploredMax = player.x;
+  let lastTime = null, accumulator = 0, uiTick = -1;
 
   const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
   const noise = (a, b = 0) => {
@@ -178,9 +172,6 @@
     }
     spin += (player.x - oldX) / player.r;
     charge = Math.min(100, charge + Math.abs(player.x - oldX) * 0.045);
-    maxDepth = Math.max(maxDepth, Math.floor(Math.max(0, player.y - FIRST_FLOOR + player.r) / 100));
-    exploredMin = Math.min(exploredMin, player.x - W * 0.45);
-    exploredMax = Math.max(exploredMax, player.x + W * 0.45);
     if (player.y > floorY(rows.length - 5)) addRows(20);
     const rowIndex = Math.max(0, Math.floor((player.y - FIRST_FLOOR + 55) / ROW_HEIGHT));
     for (const o of loot) {
@@ -202,25 +193,14 @@
     for (const row of nearbyRows()) {
       if (Math.abs(player.x - row.gapX - row.gapWidth / 2) < W * 0.5 && Math.abs(player.y - row.y) < 180) row.discovered = true;
     }
-    if (ticks - hudTick >= 6) updateHUD();
+    if (ticks - uiTick >= 6) updateBoostUI();
   }
 
-  function updateHUD() {
-    hudTick = ticks;
-    depthLabel.textContent = maxDepth + ' m';
-    scoreLabel.textContent = String(score);
-    biomeLabel.textContent = paletteAt(player.y).name;
+  function updateBoostUI() {
+    uiTick = ticks;
     boostButton.disabled = charge < 100;
     boostButton.style.setProperty('--charge', charge + '%');
-    boostButton.setAttribute('aria-label', charge >= 100 ? 'ぐるぐる発動' : 'ぐるぐる充電 ' + Math.floor(charge) + '%');
-    document.getElementById('energy').textContent = charge >= 100 ? 'ぐるぐる！' : Math.floor(charge) + '%';
-    mapTrack.style.setProperty('--from', clamp(exploredMin / WORLD_WIDTH * 100, 0, 100) + '%');
-    mapTrack.style.setProperty('--span', clamp((exploredMax - exploredMin) / WORLD_WIDTH * 100, 0, 100) + '%');
-    mapTrack.style.setProperty('--player', player.x / WORLD_WIDTH * 100 + '%');
-    const row = rows[Math.max(0, Math.floor((player.y - FIRST_FLOOR + 55) / ROW_HEIGHT))];
-    tip.textContent = row && Math.abs(player.x - row.gapX - row.gapWidth / 2) < 230 && Math.abs(player.y - row.y) < 95
-      ? 'ひかるキノコの さきへ おりてみよう！'
-      : maxDepth < 3 ? 'ひっぱって ころころ。うえに サッと ジャンプ！' : 'つぎの おりぐちは、どこかな？';
+    boostButton.setAttribute('aria-label', charge >= 100 ? 'ぐるぐる発動' : 'ぐるぐる充電中');
   }
 
   function pathLine(points) {
@@ -542,15 +522,10 @@
     }
     drag=null;
   }
-  function bindButton(id,set) {
-    const el=document.getElementById(id);
-    el.addEventListener('pointerdown',e=>{e.preventDefault();el.setPointerCapture(e.pointerId);set(true);});
-    for(const type of ['pointerup','pointercancel','lostpointercapture'])el.addEventListener(type,()=>set(false));
-  }
   function boost() {
     if(charge<100)return;
     charge=0;drag=null;jump(19);player.vx=facing*8.5;
-    burst(player.x,player.y,'#f6dfa2');updateHUD();
+    burst(player.x,player.y,'#f6dfa2');updateBoostUI();
   }
 
   function frame(time) {
@@ -569,8 +544,6 @@
   canvas.addEventListener('pointermove',pointerMove);
   canvas.addEventListener('pointerup',pointerUp);
   for(const type of ['pointercancel','lostpointercapture'])canvas.addEventListener(type,e=>{if(drag&&drag.id===e.pointerId)drag=null;});
-  bindButton('left',v=>left=v);
-  bindButton('right',v=>right=v);
   boostButton.addEventListener('click',boost);
   addEventListener('resize',resize);
   addEventListener('blur',resetInput);
@@ -585,6 +558,6 @@
     if(e.key==='ArrowLeft'||e.key==='a')left=false;
     if(e.key==='ArrowRight'||e.key==='d')right=false;
   });
-  updateHUD();
+  updateBoostUI();
   requestAnimationFrame(frame);
 })();

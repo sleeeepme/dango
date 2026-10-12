@@ -8,11 +8,11 @@
 - GitHub main is connected to Vercel production auto-deployment. Push working updates to main; keep the public URL.
 
 ## Code
-- index.html: full-screen canvas, HUD, exploration indicator and touch controls. No build step or external dependencies.
+- index.html: full-screen canvas and one icon-only boost button. No visible text or numbers. No build step or external dependencies.
 - game.js: readable single-file gameplay, world generation, physics, input and procedural Canvas artwork.
 - Fixed world width: 2240. Floors are 330px apart, with 166–196px openings at different horizontal positions. Extend rows as the player descends.
 - Camera follows horizontally and vertically; resize changes the viewport without regenerating the world or losing progress.
-- Drag horizontally and hold to roll; quick upward flick on release jumps. Left/right buttons roll. Full energy enables special boost. Arrow keys and Space are also supported.
+- Drag horizontally and hold to roll; quick upward flick on release jumps. Left/right touch buttons were removed. Full energy enables the icon-only special boost button. Arrow keys and Space are also supported.
 - Woodlouse legs and antennae animate. Drawn leaves, mushrooms, crystals and roaming collectible caterpillars replace gameplay emoji artwork.
 - Five depth palettes, soil layers, moss, roots, ferns and glowing mushrooms. Opening markers are in the world, so exploration is necessary to find them.
 
@@ -40,4 +40,4 @@
 - Keep a welcoming picture-book underground world: mint and grass greens, warm clay, rounded foliage, colorful treasure and gentle lighting.
 - The woodlouse has a blue shell, big readable eyes, rosy cheeks and a smile. Its shell rolls while the face remains readable.
 - Do not introduce realistic horror, gloomy darkness, sharp threatening forms or visually aggressive effects while polishing graphics.
-- Keep the collision outline and path clear; scenery must not hide openings. Use cream panels, large pastel buttons and simple Japanese labels.
+- Keep the collision outline and path clear; scenery must not hide openings. Use a large pastel icon-only boost button. The child cannot read: show no visible letters, labels, numbers, title, HUD or instructions. Movement is by dragging; do not restore left/right touch buttons.

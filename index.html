@@ -8,62 +8,26 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2040%2040%22%3E%3Crect%20width%3D%2240%22%20height%3D%2240%22%20rx%3D%2212%22%20fill%3D%22%23e6efcf%22%2F%3E%3Ccircle%20cx%3D%2220%22%20cy%3D%2222%22%20r%3D%2214%22%20fill%3D%22%2394b6dd%22%20stroke%3D%22%235a7b9f%22%20stroke-width%3D%222%22%2F%3E%3Cpath%20d%3D%22M10%2019q10%207%2020%200M9%2025q11%207%2022%200M15%2010q-4-8-8-3M25%2010q4-8%208-3%22%20fill%3D%22none%22%20stroke%3D%22%236d8aac%22%2F%3E%3Ccircle%20cx%3D%2215%22%20cy%3D%2218%22%20r%3D%224%22%20fill%3D%22%23fffaf0%22%2F%3E%3Ccircle%20cx%3D%2225%22%20cy%3D%2218%22%20r%3D%224%22%20fill%3D%22%23fffaf0%22%2F%3E%3Ccircle%20cx%3D%2215%22%20cy%3D%2218%22%20r%3D%222%22%20fill%3D%22%23405976%22%2F%3E%3Ccircle%20cx%3D%2225%22%20cy%3D%2218%22%20r%3D%222%22%20fill%3D%22%23405976%22%2F%3E%3Cpath%20d%3D%22M18%2023q2%203%204%200%22%20fill%3D%22none%22%20stroke%3D%22%23405976%22%2F%3E%3C%2Fsvg%3E">
 <title>ダンゴムシころころ</title>
 <style>
-:root{color-scheme:light;font-family:"Hiragino Maru Gothic ProN","Yu Gothic",system-ui,sans-serif;color:#46644f;background:#afcfb7}
+:root{color-scheme:light;background:#afcfb7}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{margin:0;overflow:hidden;overscroll-behavior:none;touch-action:none;user-select:none;-webkit-user-select:none}
 canvas{display:block;width:100vw;height:100dvh;touch-action:none}
-#hud{position:fixed;inset:calc(16px + env(safe-area-inset-top)) 16px auto;pointer-events:none;display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
-.identity{background:#fff7e2e6;border:2px solid #fffbea;border-radius:18px;padding:9px 10px;box-shadow:0 3px 0 #8b9c6b18}
-.eyebrow{font-size:9px;letter-spacing:.08em;color:#5e7955;margin:0 0 5px}
-h1{font-size:16px;font-weight:800;letter-spacing:.01em;margin:0;color:#405e4b;text-shadow:0 1px 0 #fff9e6}
-#biome{font-size:10px;color:#54754f;margin-top:6px;display:flex;align-items:center;gap:6px}
-#biome:before{content:"";width:7px;height:7px;border-radius:50%;background:#8eb64e;border:1px solid #f7f1c8}
-.stats{display:flex;gap:6px}
-.stat{min-width:53px;border:2px solid #fffbea;border-radius:16px;background:#fff5dce8;padding:7px 9px;text-align:center;box-shadow:0 3px 0 #8b9c6b24}
-.stat-label{font-size:9px;color:#7b835b;display:block;margin-bottom:3px}
-.stat-value{font-size:18px;font-weight:800;color:#566646;font-variant-numeric:tabular-nums;white-space:nowrap}
-#exploration{position:fixed;top:calc(112px + env(safe-area-inset-top));left:18px;pointer-events:none;display:flex;align-items:center;gap:8px;font-size:10px;color:#5a7653}
-#map-track{position:relative;width:95px;height:5px;border-radius:4px;background:#f4f4d976;box-shadow:inset 0 1px 1px #68905522}
-#map-track:before{content:"";position:absolute;left:var(--from,0%);width:var(--span,0%);height:5px;background:#92b66d;border-radius:4px}
-#map-track:after{content:"";position:absolute;left:var(--player,50%);top:-3px;width:11px;height:11px;background:#ffe9a2;border:2px solid #729055;border-radius:50%;transform:translateX(-50%)}
-#tip{position:fixed;bottom:calc(113px + env(safe-area-inset-bottom));left:18px;right:18px;width:fit-content;max-width:calc(100vw - 36px);margin:auto;text-align:center;font-size:11px;font-weight:600;line-height:1.6;color:#58724c;background:#fff8e4dd;border:1px solid #fffbeb;border-radius:18px;padding:6px 13px;pointer-events:none}
-#controls{position:fixed;inset:auto 18px calc(22px + env(safe-area-inset-bottom));display:flex;align-items:center;justify-content:space-between;gap:18px}
-.movement{display:flex;gap:13px}
-button{touch-action:none;border:2px solid #f7f8eb;color:#516f93;cursor:pointer;background:linear-gradient(145deg,#ecf4ef,#c9dfed);box-shadow:0 5px 0 #88a8b4,0 8px 13px #5d826320,inset 0 2px 0 #ffffff70;display:grid;place-items:center;align-content:center;gap:4px;width:68px;height:70px;border-radius:23px;font:inherit}
-button:active{transform:translateY(3px);box-shadow:0 2px 0 #88a8b4;background:#d7e9ee}
-button:focus-visible{outline:3px solid #6b8cb4;outline-offset:4px}
-button svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2.7;stroke-linecap:round;stroke-linejoin:round}
-.button-label{font-size:10px;font-weight:700}
-#boost{position:relative;overflow:hidden;width:76px;height:74px;border-radius:25px;border-color:#fff8d9;color:#9e7542;background:#fff0cce8;gap:2px;align-content:center;box-shadow:0 5px 0 #c1a56a,0 8px 13px #5d826320}
-#boost:before{content:"";position:absolute;bottom:0;left:0;width:100%;height:var(--charge,0%);background:linear-gradient(#ffda8455,#f0c46c99);z-index:0}
-#boost>*{position:relative}
-#boost svg{width:26px;height:26px;margin-bottom:2px}
-#energy{font-size:11px;font-weight:800}
-#boost:disabled{cursor:default;transform:none}
+#boost{position:fixed;right:18px;bottom:calc(22px + env(safe-area-inset-bottom));width:76px;height:74px;display:grid;place-items:center;overflow:hidden;touch-action:none;cursor:pointer;border:2px solid #fff8d9;border-radius:25px;color:#9e7542;background:#fff0cce8;box-shadow:0 5px 0 #c1a56a,0 8px 13px #5d826320}
+#boost:before{content:"";position:absolute;bottom:0;left:0;width:100%;height:var(--charge,0%);background:linear-gradient(#ffda8455,#f0c46c99)}
+#boost svg{position:relative;width:34px;height:34px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+#boost:disabled{cursor:default}
 #boost:not(:disabled){border-color:#fff8d1;color:#88622c;background:#ffe9a3;box-shadow:0 5px 0 #c1a56a,0 0 22px #fff2b577}
-@media(min-width:700px){#hud{inset:24px 28px auto}h1{font-size:21px}.eyebrow{font-size:11px}#exploration{top:130px;left:28px}#controls{left:28px;right:28px;bottom:28px}#tip{font-size:12px;bottom:126px}.stat{min-width:72px}#biome{font-size:12px}}
-@media(max-width:350px){h1{font-size:14px}.eyebrow{font-size:8px}.stat{min-width:47px;padding:7px}.stat-label{font-size:8px}}
-@media(max-height:500px){#hud{top:calc(10px + env(safe-area-inset-top))}.eyebrow,#biome,#exploration{display:none}#tip{bottom:100px}#controls{bottom:calc(12px + env(safe-area-inset-bottom))}}
+#boost:not(:disabled):active{transform:translateY(3px);box-shadow:0 2px 0 #c1a56a}
+#boost:focus-visible{outline:3px solid #6b8cb4;outline-offset:4px}
+@media(min-width:700px){#boost{right:28px;bottom:calc(28px + env(safe-area-inset-bottom))}}
+@media(max-height:500px){#boost{bottom:calc(12px + env(safe-area-inset-bottom))}}
 </style>
 </head>
 <body>
 <canvas id="game" aria-label="ダンゴムシの地下探検。左右へドラッグして移動、素早く上へ払ってジャンプ。"></canvas>
-<header id="hud">
-  <div class="identity"><p class="eyebrow">ちいさな むしの だいぼうけん</p><h1>ダンゴムシころころ</h1><div id="biome">こけの おにわ</div></div>
-  <div class="stats">
-    <div class="stat"><span class="stat-label">ふかさ</span><span class="stat-value" id="depth">0 m</span></div>
-    <div class="stat"><span class="stat-label">たからもの</span><span class="stat-value" id="score">0</span></div>
-  </div>
-</header>
-<div id="exploration"><span>←</span><div id="map-track" aria-hidden="true"></div><span>→</span><span>ちかを たんけん</span></div>
-<div id="tip">ひっぱって ころころ。うえに サッと ジャンプ！</div>
-<nav id="controls" aria-label="ゲーム操作">
-  <div class="movement">
-    <button id="left" aria-label="左へころがる"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 5-7 7 7 7M7 12h13"/></svg><span class="button-label">ひだり</span></button>
-    <button id="right" aria-label="右へころがる"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10 5 7 7-7 7M17 12H4"/></svg><span class="button-label">みぎ</span></button>
-  </div>
-  <button id="boost" aria-label="ぐるぐる充電 0%" disabled><svg viewBox="0 0 28 28" aria-hidden="true"><path d="M21 8a10 10 0 1 0 2 9M21 3v6h-6M17 11l-5 5h5l-5 5"/></svg><span id="energy">0%</span></button>
-</nav>
+<button id="boost" aria-label="ぐるぐる充電中" disabled>
+  <svg viewBox="0 0 28 28" aria-hidden="true"><path d="M21 8a10 10 0 1 0 2 9M21 3v6h-6M17 11l-5 5h5l-5 5"/></svg>
+</button>
 <script src="game.js"></script>
 </body>
 </html>
