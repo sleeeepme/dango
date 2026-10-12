@@ -26,7 +26,7 @@
   const motes = [];
   const fauna = [];
   const pickupPops = [];
-  const EVOLUTION_EVERY = 5;
+  const EVOLUTION_EVERY = 10;
   const evolution = { crystals: 0, stage: 0, pulse: 0, duration: 0 };
   const collectedAnimals = Object.create(null);
   const forms = [
@@ -66,15 +66,18 @@
   function makeSlab(row, start, end) {
     if (end - start < 60) return;
     const points = [{ x: start, y: row.y }];
-    // Long resting areas interrupted by a few low, traversable humps.
-    for (let x = start + 120; x < end - 140; x += 280) {
-      const height = row.index === 0 ? 0 : (noise(x, row.index) > 0.54 ? -8 : 0);
-      points.push({ x, y: row.y }, { x: x + 35, y: row.y + height },
-        { x: x + 85, y: row.y + height }, { x: x + 120, y: row.y });
+    // Resting areas alternate with gentle, traversable hills.
+    for (let x = start + 120; x < end - 220; x += 280) {
+      const height = row.index === 0 ? (x === start + 120 ? -32 : 0) : (noise(x, row.index) > 0.54 ? -32 : -8);
+      points.push({ x, y: row.y }, { x: x + 65, y: row.y + height },
+        { x: x + 135, y: row.y + height }, { x: x + 200, y: row.y });
     }
     points.push({ x: end, y: row.y });
     const slab = { start, end, y: row.y, points, index: row.index };
     row.slabs.push(slab);
+    // Shallow patches keep solid support, so nobody gets stuck or drowns.
+    if (end-start > 700) row.patches.push({kind:'water',start:start+440,end:start+580});
+    if (end-start > 1020) row.patches.push({kind:'mud',start:start+740,end:start+885});
     for (let i = 1; i < points.length; i++) {
       const a = points[i - 1], b = points[i];
       row.walls.push({ x: a.x, y: a.y, x2: b.x, y2: b.y, top: true });
@@ -92,7 +95,7 @@
       const index = rows.length, y = floorY(index);
       const gapX = route[index % route.length] + (index < 8 ? 0 : (noise(index, 6) - 0.5) * 100);
       const gapWidth = 166 + noise(index, 3) * 30;
-      const row = { index, y, gapX, gapWidth, slabs: [], walls: [], discovered: false };
+      const row = { index, y, gapX, gapWidth, slabs: [], walls: [], patches: [], discovered: false };
       makeSlab(row, 0, gapX);
       makeSlab(row, gapX + gapWidth, WORLD_WIDTH);
       rows.push(row);
@@ -100,7 +103,11 @@
       for (let x = 90; x < WORLD_WIDTH - 60; x += 155 + Math.round(noise(index, x) * 55)) {
         if (x > gapX - 30 && x < gapX + gapWidth + 30) continue;
         const s = row.walls.find(s => s.top && x >= s.x && x <= s.x2);
-        if (s) loot.push({ x, y: surfaceY(s, x) - 43, got: false, kind: index % 3 === 2 || (itemIndex++ + index) % 3 === 1 ? 2 : index % 2, row: index, phase: noise(x, index) * 6 });
+        if (s) {
+          const kind = index % 3 === 2 || (itemIndex++ + index) % 3 === 1 ? 2 : index % 2;
+          const lift = kind === 2 ? (noise(x,index+8) > .5 ? 116 : 94) : 43;
+          loot.push({x,y:surfaceY(s,x)-lift,got:false,kind,row:index,phase:noise(x,index)*6});
+        }
       }
       // Friendly visitors are independent of collectible caterpillars.
       const positions = index === 0 ? [930, 1190, 1370] : [770, 1130, 1550];
@@ -167,6 +174,15 @@
     }
   }
 
+  function patchAt() {
+    if (!player.ground) return null;
+    for (const row of nearbyRows()) {
+      if (!row.walls.includes(player.ground)) continue;
+      return row.patches.find(p => player.x >= p.start && player.x <= p.end) || null;
+    }
+    return null;
+  }
+
   function update() {
     ticks++;
     if(evolution.pulse > 0)evolution.pulse--;
@@ -180,7 +196,13 @@
       player.vx *= player.ground ? 0.81 : 0.98;
       if (Math.abs(player.vx) < 0.08) player.vx = 0;
     }
-    const horizontalLimit = !player.ground && !active ? 14 : 8.5;
+    const patch = patchAt();
+    if (patch) {
+      player.vx *= patch.kind === 'mud' ? .84 : .94;
+      if (Math.abs(player.vx) > .8 && ticks % 12 === 0)
+        burst(player.x,player.y+18,patch.kind === 'mud' ? '#d2a57f' : '#b7f2ee');
+    }
+    const horizontalLimit = patch ? (patch.kind === 'mud' ? 4 : 6) : (!player.ground && !active ? 14 : 8.5);
     player.vx = clamp(player.vx, -horizontalLimit, horizontalLimit);
     player.vy = Math.min(18, player.vy + GRAVITY);
 
@@ -211,7 +233,11 @@
     const rowIndex = Math.max(0, Math.floor((player.y - FIRST_FLOOR + 55) / ROW_HEIGHT));
     for (const o of loot) {
       if (o.got || Math.abs(o.row - rowIndex) > 2) continue;
-      if (o.bug) o.x = o.baseX + Math.sin(ticks * 0.025 + o.phase) * 45;
+      if (o.bug) {
+        o.x = o.baseX + Math.sin(ticks * 0.025 + o.phase) * 45;
+        const surface=rows[o.row].walls.find(w=>w.top&&o.x>=w.x&&o.x<=w.x2);
+        if(surface)o.y=surfaceY(surface,o.x)-17;
+      }
       if (Math.hypot(o.x - player.x, o.y - player.y) < (o.bug ? 34 : 44)) {
         o.got = true;
         score++;
@@ -430,9 +456,28 @@
     }
   }
 
+  function drawPatch(row,patch) {
+    if(patch.end<camera.x-30||patch.start>camera.x+W+30)return;
+    const top=x=>surfaceY(row.walls.find(w=>w.top&&x>=w.x&&x<=w.x2),x)-camera.y;
+    const water=patch.kind==='water',left=patch.start-camera.x,right=patch.end-camera.x;
+    g.save();g.lineJoin='round';g.lineCap='round';
+    g.beginPath();g.moveTo(left,top(patch.start)-2);
+    for(let x=patch.start+5;x<=patch.end;x+=5)g.lineTo(x-camera.x,top(x)-2);
+    g.quadraticCurveTo(right-12,top(patch.end)+14,(left+right)/2,top((patch.start+patch.end)/2)+12);
+    g.quadraticCurveTo(left+12,top(patch.start)+14,left,top(patch.start)-2);
+    g.closePath();g.fillStyle=water?'#81d3dc':'#ad7959';g.fill();
+    g.clip();g.strokeStyle=water?'#dcffff':'#d8aa80';g.lineWidth=2;
+    for(let x=patch.start+15;x<patch.end-8;x+=28){
+      const sx=x-camera.x,y=top(x)+4;
+      g.beginPath();g.ellipse(sx,y,8+Math.sin(ticks*.035+x)*2,2,0,0,7);g.stroke();
+    }
+    g.restore();
+  }
+
   function drawRow(row) {
     const y=row.y-camera.y,palette=paletteAt(row.y);
     for(const slab of row.slabs)drawSlab(slab,palette);
+    for (const patch of row.patches) drawPatch(row,patch);
     const edge=row.gapX-camera.x;
     if(edge>-180&&edge<W+180) {
       glow(edge+row.gapWidth/2,y+90,100,'#fff2ba',0.25);
@@ -639,28 +684,34 @@
     if(pulse>0){
       const duration=evolution.duration||150,progress=1-pulse/duration;
       const opacity=Math.min(1,(duration-pulse+1)/12,pulse/35);
-      glow(0,-6,105,'#ffe5ab',opacity*.5);
+      glow(0,-6,150,'#ffe5ab',opacity*.65);
       g.save();g.globalAlpha=opacity*.85;
-      const radius=35+progress*28;
-      g.strokeStyle='#95b6c8';g.lineWidth=7;
+      const radius=42+progress*48;
+      g.strokeStyle='#95b6c8';g.lineWidth=9;
       g.beginPath();g.arc(0,0,radius,0,Math.PI*2);g.stroke();
       g.strokeStyle='#fff9dc';g.lineWidth=3;
       g.beginPath();g.arc(0,0,radius,0,Math.PI*2);g.stroke();
       g.strokeStyle='#e9bd70';g.lineWidth=2.5;
       g.beginPath();g.arc(0,0,radius+9,0,Math.PI*2);g.stroke();
-      for(let i=0;i<10;i++){
-        const angle=i*Math.PI/5+progress*.75;
-        const distance=48+Math.sin(progress*Math.PI)*15;
-        star(Math.cos(angle)*distance,Math.sin(angle)*distance,5+Math.sin(progress*Math.PI)*2,
-          ['#eab978','#a0c4df','#e5aaa4'][i%3]);
+      for(let i=0;i<18;i++){
+        const angle=i*Math.PI/9+progress*1.8;
+        const distance=65+Math.sin(progress*Math.PI)*35;
+        star(Math.cos(angle)*distance,Math.sin(angle)*distance,7+Math.sin(progress*Math.PI)*4,
+          ['#ffd47b','#8ddce8','#f5a6cf'][i%3]);
+      }
+      for(let i=0;i<12;i++){
+        const angle=i*Math.PI/6-progress*.8,inner=50+progress*20,outer=inner+16+Math.sin(progress*Math.PI)*20;
+        g.strokeStyle=i%2?'#ffedac':'#d2f5ff';g.lineWidth=4;
+        g.beginPath();g.moveTo(Math.cos(angle)*inner,Math.sin(angle)*inner);
+        g.lineTo(Math.cos(angle)*outer,Math.sin(angle)*outer);g.stroke();
       }
       g.restore();
     }
     // Small collected gems orbit the character; no labels or numbers.
-    const count=evolution.stage===forms.length-1 ? 5 : evolution.crystals%EVOLUTION_EVERY;
+    const count=evolution.stage===forms.length-1 ? 10 : evolution.crystals%EVOLUTION_EVERY;
     g.save();
     for(let i=0;i<count;i++){
-      const a=-Math.PI*.8+i*.45+Math.sin(ticks*.015)*.05;
+      const a=-Math.PI*.8+i*.3+Math.sin(ticks*.015)*.05;
       const x=Math.cos(a)*29,y=Math.sin(a)*29-8;
       g.globalAlpha=.7;g.fillStyle='#d9f8f4';g.strokeStyle='#83b8ce';g.lineWidth=1;
       g.beginPath();g.moveTo(x,y-4);g.lineTo(x+3,y);g.lineTo(x,y+4);g.lineTo(x-3,y);g.closePath();g.fill();g.stroke();

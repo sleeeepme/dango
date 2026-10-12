@@ -46,7 +46,7 @@
 - Gravity is 0.55 px per fixed step squared. Normal flick launch is capped at 8–11 px/step; keyboard launch is 9.5; boost is 12.5.
 - Normal jumping requires ground or a 7-step edge grace period. Consuming a jump clears the grace period; flicks cannot repeatedly lift the player in mid-air. Boost may launch in mid-air.
 - Normal maximum rise is about 100px. Preserve grounded rest, slow-drag behavior and ceiling bounce.
-- Collectible treasure is drawn at 1.75x with a ring/glow, positioned 43px above the floor, and collected within 44px. Caterpillars retain their existing behavior.
+- Collectible treasure is drawn at 1.75x with a ring/glow, positioned 43px above the floor (crystals now float higher; see aerial crystals below), and collected within 44px. Caterpillars retain their existing behavior.
 - A successful treasure pickup shows its picture above the player at 2x for 48 steps and then fades; no text or numbers.
 - Friendly fauna are separate from loot: rhinoceros beetle, stag beetle, mantis, ladybug, frog, snail and butterfly. They move gently, greet nearby players and can now be collected on contact; they never attack or block.
 - Place friends between treasures so larger icons do not hide faces or distinctive horns.
@@ -61,9 +61,9 @@
 - The rendering regression test records platform contour paths and compares their world positions across camera offsets and animation ticks.
 
 ## Crystal evolution (2026-10-12)
-- Every 5 collected crystals advances appearance: normal -> robot (5) -> super (10) -> dragon (15) -> masked rider (20) -> silver/red giant hero (25).
+- Every 10 collected crystals advances appearance: normal -> robot (10) -> super (20) -> dragon (30) -> masked rider (40) -> silver/red giant hero (50).
 - EVOLUTION_EVERY, evolution and forms are private game state. Only non-bug kind=2 collectibles increment crystal count.
-- Keep the final form after 25 crystals. Further multiples of 5 celebrate without reverting. Progress is session-only, matching the existing game.
+- Keep the final form after 50 crystals. Further multiples of 10 celebrate without reverting. Progress is session-only, matching the existing game.
 - Every floor includes at least 3 crystals, including the first. Leaves, mushrooms and collectible caterpillars keep their existing rewards.
 - Evolutions have distinct silhouettes/accessories, gentle ring/star effects and small crystal pictures near the character; no visible text, numeric counters or HUD panels.
 - Preserve all physics and radius=20 across every form, including low sideways flicks, limited upward jumps and grounded rest.
@@ -72,4 +72,12 @@
 ## Collectible wildlife and readable transformation
 - All seven fauna are collectible once on contact (42px from body center). Keep them friendly and non-blocking. Track got and per-species collectedAnimals; reward score and charge +7 and show the animal picture for 65 steps.
 - Wildlife does not increment crystal evolution. Skip captured animals during movement and world drawing.
-- Evolution duration is 150 fixed steps (~2.5s), with thick blue/cream and gold rings, ten colored stars, warm glow and a gentle maximum 18% visual enlargement. Fade in/out; no full-screen flash, text, pause or physics changes.
+- Evolution duration is 150 fixed steps (~2.5s), with thick blue/cream and gold rings, eighteen colored stars and twelve light rays, warm glow and a gentle maximum 18% visual enlargement. Fade in/out; no full-screen flash, text, pause or physics changes.
+
+## Ramps, water, mud and aerial crystals
+- Mostly flat floors now include 32px hills with 65px ramps. Ground support prevents passive slope drift.
+- Shallow water and mud patches are nonlethal and retain solid support. Water applies .94 drag and speed cap 6; mud .84 drag and cap 4 only on the ground. Jump strength is unchanged; airborne motion ignores patches.
+- Small blue or warm clay splashes occur while moving through patches. Their contours stay in world coordinates; only ripples animate.
+- Crystals float 94 or 116px above their local floor, within normal jump reach. Other treasure remains 43px above ground.
+- Evolution uses 10 crystals per form (final at 50); bright larger rings, eighteen stars, twelve rays and a 150px glow remain local to the character. No full-screen flash, pause, text or physics changes.
+- Temporary transformation showcase is local-only at /tmp/dango-terrain-preview; never publish its injected state.

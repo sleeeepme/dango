@@ -188,3 +188,12 @@ AGENTS.mdの「slow upward drag should not let it fly」と不一致。ドラッ
 - 演出は徐々に現れて消え、操作や物理の時間を止めない。判定の半径、ジャンプ、スワイプ、文字なしの画面を維持。
 - 構文と23テストが成功。7種類の取得・二重カウント防止・取得の絵・充電・進化個数への非加算、および変身演出の継続・終了後も形態を保つことを確認。
 - ブラウザでカマキリ・クワガタ・カブトムシ等のゲットと、ロボ進化を包む光の輪と星を確認。警告・エラーログは0件。実機iPhone Safariは未確認。
+
+
+## 2026-10-12 — Ramps, puddles, mud and aerial crystals
+- Added 32px hills with 65px ramps, shallow blue water and warm brown mud. Patches slow grounded rolling only; jumping and escape remain available, with no drowning or game over. Collectible caterpillars follow the new ground contour.
+- Crystal evolution is now every 10 pickups, final form at 50. Crystals sit 94/116px above their local floor, so jumping is needed; leaves/mushrooms keep their existing placement.
+- Transformation remains 150 steps and now has larger thicker rings, 18 colorful stars, 12 rays and a larger warm glow, with no screen flash or gameplay pause.
+- `node --check game.js`, `node --test tests/physics-baseline.cjs`: 26 tests passed. New assertions cover climbing both ways, stationary slope support, water/mud speed and escape, and airborne crystal pickup. Existing flick, collision, timing, resize and rendering checks still pass.
+- Browser at 1280×720: moved through mud, jumped to collect an aerial crystal, explored to the first opening and descended onto the next hilly floor; no console warnings/errors. Local-only transformation showcase visually confirmed the larger rings/stars/rays. A requested viewport override did not resize this browser surface, so no new phone-sized browser verification is claimed.
+- iPhone Safari real-device testing has not been performed.

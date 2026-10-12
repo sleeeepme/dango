@@ -43,7 +43,7 @@ function game(width = 390, height = 844) {
   const hook = '  requestAnimationFrame(frame);\n})();';
   assert.ok(source.endsWith(hook + '\n'), 'Update the test harness for changed entry point');
   vm.runInContext(source.replace(hook,
-    '  globalThis.test = {player,camera,rows,loot,update,frame,resize,collision,restY,boost,fauna,pickupPops,drawSlab,palettes,forms,evolution,collectedAnimals,drawPlayer,WORLD_WIDTH,STEP_MS,' +
+    '  globalThis.test = {player,camera,rows,loot,update,frame,resize,collision,restY,boost,fauna,pickupPops,drawSlab,palettes,forms,evolution,collectedAnimals,drawPlayer,patchAt,WORLD_WIDTH,STEP_MS,' +
     'controls:(l,r)=>{left=l;right=r},charge:v=>charge=v,state:()=>({drag,left,right,charge,score,ticks})};\n})();'), context);
   return {
     ...context.test,
@@ -73,6 +73,12 @@ test('wide floors require horizontal exploration between successive exits', () =
     assert.ok(b.gapWidth>t.player.r*4);
   }
   assert.ok(t.rows.every(r=>r.slabs.length===2));
+  for(const row of t.rows)for(const slab of row.slabs){
+    for(let i=0;i<slab.points.length;i++){
+      const p=slab.points[i];assert.ok(p.x>=slab.start&&p.x<=slab.end,'Hills must never cover an opening');
+      if(i)assert.ok(p.x>slab.points[i-1].x,'Floor contours must remain ordered');
+    }
+  }
 });
 test('player rests on flat ground and shallow humps without drift', () => {
   const t=game();t.settle();
@@ -275,19 +281,19 @@ test('platform underside keeps the same world shape while the camera moves', () 
   assert.deepEqual(shapeAt(0,0),baseline,'Animation ticks must not reshape terrain');
 });
 
-test('only crystals evolve the player at every five pickups, with no duplicate counting', () => {
+test('only crystals evolve the player at every ten pickups, with no duplicate counting', () => {
   const t=game();t.settle();for(const item of t.loot)item.got=true;
   const collect=kind=>{
     const item={x:t.player.x,y:t.player.y,got:false,kind,row:0,phase:0};
     t.loot.push(item);t.step();return item;
   };
   collect(0);collect(1);assert.equal(t.evolution.crystals,0);assert.equal(t.evolution.stage,0);
-  for(let count=1;count<=30;count++){
+  for(let count=1;count<=60;count++){
     const item=collect(2);
     assert.equal(item.got,true);assert.equal(t.evolution.crystals,count);
-    assert.equal(t.evolution.stage,Math.min(5,Math.floor(count/5)));
+    assert.equal(t.evolution.stage,Math.min(5,Math.floor(count/10)));
     t.step(2);assert.equal(t.evolution.crystals,count,'Already collected crystal must not count again');
-    if(count%5===0)assert.ok(t.evolution.pulse>0);
+    if(count%10===0)assert.ok(t.evolution.pulse>0);
   }
   assert.equal(t.forms[t.evolution.stage].id,'ultra');
   t.step(130);assert.equal(t.evolution.pulse,0);assert.equal(t.evolution.stage,5);
@@ -298,7 +304,7 @@ test('all evolution forms render and retain jump, flick and collision behavior',
   const ids=['normal','robot','super','dragon','rider','ultra'];
   assert.deepEqual(Array.from(t.forms.map(f=>f.id)),ids);
   for(let stage=0;stage<ids.length;stage++){
-    t.evolution.stage=stage;t.evolution.crystals=stage*5;t.evolution.pulse=70;
+    t.evolution.stage=stage;t.evolution.crystals=stage*10;t.evolution.pulse=70;
     t.drawPlayer();
     assert.equal(t.player.r,20);
     t.event('canvas','pointerdown',{},2000);
@@ -345,9 +351,42 @@ test('all seven animals can be collected once, with a picture and charging rewar
 });
 test('transform effect lasts long enough to notice, fades, and leaves the evolved form', () => {
   const t=game();t.settle();for(const item of t.loot)item.got=true;
-  for(let i=0;i<5;i++){t.loot.push({x:t.player.x,y:t.player.y,row:0,kind:2,phase:0});t.step();}
+  for(let i=0;i<10;i++){t.loot.push({x:t.player.x,y:t.player.y,row:0,kind:2,phase:0});t.step();}
   assert.equal(t.evolution.stage,1);assert.equal(t.evolution.pulse,150);
   t.step(60);assert.equal(t.evolution.pulse,90);t.drawPlayer();
   assert.equal(t.player.r,20);
   t.step(100);assert.equal(t.evolution.pulse,0);assert.equal(t.evolution.stage,1);
+});
+
+
+test('ramps can be climbed in both directions and stop without slope drift',()=>{
+  for(const dir of [-1,1]){
+    const t=game(),row=t.rows[0],x=dir===1?100:350;
+    const s=row.walls.find(s=>s.top&&x>=s.x&&x<=s.x2);
+    Object.assign(t.player,{x,y:t.restY(s,x),vx:0,vy:0,ground:s});
+    t.controls(dir<0,dir>0);let minY=t.player.y;for(let i=0;i<35;i++){t.step();minY=Math.min(minY,t.player.y);}
+    assert.ok(minY<row.y-40,'Climb a visibly raised hill');assert.ok(t.player.ground);
+    t.controls(false,false);t.step(100);const rest={x:t.player.x,y:t.player.y};t.step(300);
+    assert.equal(t.player.x,rest.x);assert.equal(t.player.y,rest.y);
+  }
+});
+test('water and mud slow rolling, allow jumping out, and never trap the player',()=>{
+  const speeds=[];
+  for(const kind of ['water','mud']){
+    const t=game(),p=t.rows[0].patches.find(p=>p.kind===kind),x=(p.start+p.end)/2;
+    const s=t.rows[0].walls.find(s=>s.top&&x>=s.x&&x<=s.x2);
+    Object.assign(t.player,{x,y:t.restY(s,x),vx:0,vy:0,ground:s});
+    t.controls(false,true);t.step(12);assert.equal(t.patchAt().kind,kind);speeds.push(t.player.vx);
+    t.event('window','keydown',{key:' '});assert.equal(t.player.vy,-9.5);assert.equal(t.patchAt(),null);
+    t.step(80);assert.ok(t.player.x>p.end,'Holding drag/keys must get out');
+  }
+  assert.ok(speeds[0]>speeds[1]);assert.ok(speeds[1]>1);
+});
+test('airborne crystals require a jump and are reachable within the normal jump arc',()=>{
+  const t=game();for(const a of t.fauna)a.got=true;
+  const item=t.loot.find(o=>o.row===0&&o.kind===2),s=t.rows[0].walls.find(s=>s.top&&item.x>=s.x&&item.x<=s.x2);
+  for(const o of t.loot)if(o!==item)o.got=true;
+  Object.assign(t.player,{x:item.x,y:t.restY(s,item.x),vx:0,vy:0,ground:s});
+  t.step(10);assert.equal(item.got,false);
+  t.event('window','keydown',{key:' '});t.step(20);assert.equal(item.got,true);
 });
