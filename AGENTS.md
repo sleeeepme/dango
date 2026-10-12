@@ -41,3 +41,12 @@
 - The woodlouse has a blue shell, big readable eyes, rosy cheeks and a smile. Its shell rolls while the face remains readable.
 - Do not introduce realistic horror, gloomy darkness, sharp threatening forms or visually aggressive effects while polishing graphics.
 - Keep the collision outline and path clear; scenery must not hide openings. Use a large pastel icon-only boost button. The child cannot read: show no visible letters, labels, numbers, title, HUD or instructions. Movement is by dragging; do not restore left/right touch buttons.
+
+## Jump, treasure and friendly wildlife (2026-10-12)
+- Gravity is 0.55 px per fixed step squared. Normal flick launch is capped at 8–11 px/step; keyboard launch is 9.5; boost is 12.5.
+- Normal jumping requires ground or a 7-step edge grace period. Consuming a jump clears the grace period; flicks cannot repeatedly lift the player in mid-air. Boost may launch in mid-air.
+- Normal maximum rise is about 100px. Preserve grounded rest, slow-drag behavior and ceiling bounce.
+- Collectible treasure is drawn at 1.75x with a ring/glow, positioned 43px above the floor, and collected within 44px. Caterpillars retain their existing behavior.
+- A successful treasure pickup shows its picture above the player at 2x for 48 steps and then fades; no text or numbers.
+- Friendly fauna are separate from loot: rhinoceros beetle, stag beetle, mantis, ladybug, frog, snail and butterfly. They move gently, greet nearby players and never attack, block or disappear as pickups.
+- Place friends between treasures so larger icons do not hide faces or distinctive horns.

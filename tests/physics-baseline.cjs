@@ -36,7 +36,7 @@ function game(width = 390, height = 844) {
   const hook = '  requestAnimationFrame(frame);\n})();';
   assert.ok(source.endsWith(hook + '\n'), 'Update the test harness for changed entry point');
   vm.runInContext(source.replace(hook,
-    '  globalThis.test = {player,camera,rows,loot,update,frame,resize,collision,restY,boost,WORLD_WIDTH,STEP_MS,' +
+    '  globalThis.test = {player,camera,rows,loot,update,frame,resize,collision,restY,boost,fauna,pickupPops,WORLD_WIDTH,STEP_MS,' +
     'controls:(l,r)=>{left=l;right=r},charge:v=>charge=v,state:()=>({drag,left,right,charge,score,ticks})};\n})();'), context);
   return {
     ...context.test,
@@ -99,7 +99,7 @@ test('quick upward flick jumps, slow or stale releases do not', () => {
     t.event('canvas','pointerdown',{},2000);
     t.event('canvas','pointermove',{clientY:220},2000+duration);
     t.event('canvas','pointerup',{clientY:220},2000+duration+pause);
-    if(jump){assert.equal(t.player.vy,-22);assert.equal(t.player.ground,null);}
+    if(jump){assert.equal(t.player.vy,-11);assert.equal(t.player.ground,null);}
     else assert.equal(t.player.vy,0);
   }
 });
@@ -107,7 +107,7 @@ test('ceiling collision bounces and boost still requires 100 percent', () => {
   const t=game();Object.assign(t.player,{x:1100,y:375,vx:0,vy:-15,ground:null});
   t.step(2);assert.ok(t.player.vy>0);
   t.settle();t.charge(99);t.boost();assert.equal(t.state().charge,99);
-  t.charge(100);t.boost();assert.equal(t.state().charge,0);assert.equal(t.player.vy,-19);
+  t.charge(100);t.boost();assert.equal(t.state().charge,0);assert.equal(t.player.vy,-12.5);
   assert.equal(t.player.ground,null);
 });
 test('walking to an exit descends and following exits require a turn', () => {
@@ -151,4 +151,53 @@ test('deeper exploration extends the map without a lethal bottom', () => {
   const t=game(),count=t.rows.length;
   Object.assign(t.player,{y:t.rows[count-3].y,ground:null});
   t.step();assert.ok(t.rows.length>count);
+});
+
+test('fastest jump has a short gravity arc, lands, and cannot reset mid-air', () => {
+  const t=game();t.settle();const startY=t.player.y;
+  t.event('canvas','pointerdown',{},2000);
+  t.event('canvas','pointermove',{clientY:220},2050);
+  t.event('canvas','pointerup',{clientY:220},2051);
+  t.step(8);const vy=t.player.vy;
+  t.event('canvas','pointerdown',{},2200);
+  t.event('canvas','pointermove',{clientY:220},2250);
+  t.event('canvas','pointerup',{clientY:220},2251);
+  assert.equal(t.player.vy,vy,'Repeated airborne flick must not provide another jump');
+  let minY=t.player.y;
+  for(let i=0;i<90;i++){t.step();minY=Math.min(minY,t.player.y);}
+  assert.ok(startY-minY>=85&&startY-minY<=110,'The jump should rise about 100px');
+  assert.equal(t.player.y,startY);assert.ok(t.player.ground);assert.equal(t.player.vy,0);
+});
+
+test('larger treasure is reachable from the floor and displays a pickup picture', () => {
+  const t=game();const o=t.loot.find(o=>!o.bug);
+  const surface=t.rows[o.row].walls.find(s=>s.top&&o.x>=s.x&&o.x<=s.x2);
+  Object.assign(t.player,{x:o.x+28,y:t.restY(surface,o.x+28),ground:surface,vx:0,vy:0});
+  t.step();
+  assert.equal(o.got,true);assert.equal(t.state().score,1);
+  assert.equal(t.pickupPops.length,1);
+  assert.equal(t.pickupPops[0].kind,o.kind);
+  t.step(60);assert.equal(t.pickupPops.length,0);
+});
+
+test('friendly beetles, mantises and animals move safely on solid floors', () => {
+  const t=game();
+  const kinds=new Set(t.fauna.map(o=>o.kind));
+  for(const kind of ['beetle','stag','mantis','ladybug','frog','snail','butterfly'])assert.ok(kinds.has(kind));
+  assert.deepEqual(Array.from(t.fauna.filter(o=>o.row===0).map(o=>o.kind)),['beetle','stag','mantis']);
+  for(const item of t.loot)item.got=true; // Isolate greeting from nearby treasure.
+  const animal=t.fauna.find(o=>o.kind==='beetle'),oldX=animal.x;
+  Object.assign(t.player,{x:animal.x,y:animal.y-20,vx:0,vy:0,ground:null});
+  t.step(30);
+  assert.notEqual(animal.x,oldX);assert.ok(animal.hello>0.5);
+  assert.ok(t.player.ground);assert.equal(t.state().score,0,'Friends should not disappear as collectibles');
+  for(const o of t.fauna){
+    const row=t.rows[o.row];
+    assert.ok(o.baseX+18<row.gapX||o.baseX-18>row.gapX+row.gapWidth);
+  }
+  // Exercise every drawing at its own depth using the actual frame function.
+  for(const kind of kinds){
+    const o=t.fauna.find(o=>o.kind===kind);
+    t.player.y=o.y-20;t.player.x=o.x;t.player.ground=null;t.resizeTo(390,844);t.frame(0);
+  }
 });
